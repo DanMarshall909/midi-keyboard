@@ -20,8 +20,8 @@
 
       <!-- Control bar (above keyboard) -->
       <div id="control-bar">
-        <!-- Octave, Patch -->
-        <div class="ctrl-section">
+        <!-- Panel: Octave -->
+        <div class="ctrl-panel">
           <div class="ctrl-item">
             <div class="ctrl-label">Oct</div>
             <div class="ctrl-row centered">
@@ -30,15 +30,18 @@
               <button id="oct-up">+</button>
             </div>
           </div>
+        </div>
 
+        <!-- Panel: Patch -->
+        <div class="ctrl-panel">
           <div class="ctrl-item">
             <div class="ctrl-label">Patch</div>
             <select id="patch-select"></select>
           </div>
         </div>
 
-        <!-- Knobs -->
-        <div class="ctrl-section knobs-section">
+        <!-- Panel: Knobs -->
+        <div class="ctrl-panel knobs-panel">
           <div class="knob-cell">
             <div class="ctrl-label">Vel</div>
             <div class="knob" id="knob-vel" data-value="100" data-min="1" data-max="127"></div>
@@ -66,8 +69,8 @@
           </div>
         </div>
 
-        <!-- Right section: Sustain -->
-        <div class="ctrl-section">
+        <!-- Panel: Sustain -->
+        <div class="ctrl-panel">
           <div class="ctrl-item sustain-item">
             <button id="sustain-btn">Sustain</button>
           </div>
