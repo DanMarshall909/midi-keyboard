@@ -137,20 +137,32 @@ button:hover { background: #3a3a6a; }
   align-items: flex-start;
   flex: 1;
   overflow: hidden;
+  perspective: 600px;
 }
 
 #keyboard {
   position: relative;
   height: 180px;
   display: flex;
+  transform: rotateX(4deg);
+  transform-origin: top center;
+  filter: drop-shadow(0 12px 18px rgba(0,0,0,0.6));
 }
 
 .key-white {
   position: relative;
   width: 50px;
   height: 180px;
-  background: #f5f5f0;
-  border: 1px solid #aaa;
+  background: linear-gradient(
+    to bottom,
+    #f0f0eb 0%,
+    #fafaf7 8%,
+    #ebebE6 70%,
+    #d4d4cc 100%
+  );
+  border-left: 1px solid #bbb;
+  border-right: 1px solid #999;
+  border-bottom: 1px solid #888;
   border-top: none;
   border-radius: 0 0 6px 6px;
   cursor: pointer;
@@ -159,24 +171,50 @@ button:hover { background: #3a3a6a; }
   justify-content: center;
   padding-bottom: 8px;
   font-size: 10px;
-  color: #888;
-  transition: background 60ms;
+  color: #999;
+  box-shadow:
+    inset 1px 0 0 rgba(255,255,255,0.9),
+    inset -1px 0 0 rgba(0,0,0,0.06),
+    2px 4px 6px rgba(0,0,0,0.25);
+  transition: background 60ms, box-shadow 60ms, transform 60ms;
   flex-shrink: 0;
 }
 
-.key-white:hover { background: #e8e8e0; }
+.key-white:hover {
+  background: linear-gradient(
+    to bottom,
+    #e8e8e2 0%,
+    #f2f2ee 8%,
+    #e2e2dc 70%,
+    #ccccc4 100%
+  );
+}
 
 .key-white.active {
-  background: #7cb9e8;
-  color: #1a1a2e;
+  background: linear-gradient(to bottom, #6aaed8 0%, #9dd0f0 30%, #7cb9e8 100%);
+  color: #1a3a5a;
+  box-shadow:
+    inset 1px 0 0 rgba(255,255,255,0.4),
+    inset 0 4px 8px rgba(0,0,0,0.2),
+    1px 2px 3px rgba(0,0,0,0.2);
+  transform: translateY(2px);
 }
 
 .key-black {
   position: absolute;
   width: 30px;
   height: 110px;
-  background: #222;
-  border-radius: 0 0 4px 4px;
+  background: linear-gradient(
+    to bottom,
+    #555 0%,
+    #2a2a2a 12%,
+    #1a1a1a 60%,
+    #111 100%
+  );
+  border-left: 1px solid #555;
+  border-right: 1px solid #111;
+  border-bottom: 2px solid #000;
+  border-radius: 0 0 5px 5px;
   cursor: pointer;
   z-index: 2;
   display: flex;
@@ -184,15 +222,33 @@ button:hover { background: #3a3a6a; }
   justify-content: center;
   padding-bottom: 6px;
   font-size: 9px;
-  color: #666;
-  transition: background 60ms;
+  color: #555;
+  box-shadow:
+    inset 1px 0 0 rgba(255,255,255,0.12),
+    inset -1px 0 0 rgba(0,0,0,0.4),
+    3px 6px 10px rgba(0,0,0,0.6),
+    1px 1px 0 #000;
+  transition: background 60ms, box-shadow 60ms, transform 60ms;
 }
 
-.key-black:hover { background: #333; }
+.key-black:hover {
+  background: linear-gradient(
+    to bottom,
+    #666 0%,
+    #333 12%,
+    #222 60%,
+    #181818 100%
+  );
+}
 
 .key-black.active {
-  background: #2979ff;
-  color: #fff;
+  background: linear-gradient(to bottom, #1a5cc8 0%, #2979ff 40%, #1a5cc8 100%);
+  color: #aad4ff;
+  box-shadow:
+    inset 1px 0 0 rgba(255,255,255,0.2),
+    inset 0 3px 6px rgba(0,0,0,0.4),
+    1px 3px 5px rgba(0,0,0,0.5);
+  transform: translateY(3px);
 }
 
 /* ── Hint bar ── */
