@@ -281,8 +281,18 @@ async function loadPorts() {
       opt.textContent = name;
       portSelect.appendChild(opt);
     });
-    if (ports.length === 0) setStatus("No MIDI outputs found", "error");
-    else setStatus(`${ports.length} port(s) found`);
+    if (ports.length === 0) { setStatus("No MIDI outputs found", "error"); return; }
+    setStatus(`${ports.length} port(s) found`);
+
+    // Auto-connect the last used port if it's still present
+    const lastPort = localStorage.getItem("lastMidiPort");
+    if (lastPort) {
+      const idx = ports.indexOf(lastPort);
+      if (idx !== -1) {
+        portSelect.value = idx;
+        portSelect.dispatchEvent(new Event("change"));
+      }
+    }
   } catch (e) {
     setStatus(String(e), "error");
   }
@@ -300,6 +310,7 @@ portSelect.addEventListener("change", async () => {
     const name = await invoke("connect_port", { portIndex: parseInt(idx) });
     connected = true;
     setStatus(`Connected: ${name}`, "connected");
+    localStorage.setItem("lastMidiPort", name);
     await invoke("program_change", { channel, program: patch });
   } catch (e) {
     connected = false;
