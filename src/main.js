@@ -390,6 +390,8 @@ sustainBtn.addEventListener("click", async () => {
 // ── Aspect-ratio enforcement ──────────────────────────────────────────────────
 const appWindow = getCurrentWindow();
 let aspectCorrecting = false;
+let prevLogW = 0;
+let prevLogH = 0;
 
 async function correctAspectRatio() {
   if (aspectCorrecting) return;
@@ -398,14 +400,29 @@ async function correctAspectRatio() {
     const size = await appWindow.innerSize();
     const sf   = await appWindow.scaleFactor();
     const logW = size.width / sf;
-    // overhead = everything above the keyboard container (titlebar, panel, padding)
+    const logH = size.height / sf;
     const overhead = window.innerHeight - keyboardContainer.clientHeight;
-    const newLogH  = Math.round((logW / 15) * 3.6 + overhead);
-    if (Math.abs(newLogH - window.innerHeight) > 2) {
-      await appWindow.setSize(new LogicalSize(logW, newLogH));
+    const dW = Math.abs(logW - prevLogW);
+    const dH = Math.abs(logH - prevLogH);
+
+    let newW, newH;
+    if (dW >= dH) {
+      // User dragged horizontally — correct height
+      newW = logW;
+      newH = Math.round(logW / 14 * 3.6 + overhead);
+    } else {
+      // User dragged vertically — correct width
+      newH = logH;
+      newW = Math.round((logH - overhead) / 3.6 * 14);
+    }
+
+    prevLogW = newW;
+    prevLogH = newH;
+
+    if (Math.abs(newW - logW) > 2 || Math.abs(newH - logH) > 2) {
+      await appWindow.setSize(new LogicalSize(newW, newH));
     }
   } finally {
-    // Hold the flag long enough to swallow the setSize-triggered resize event
     setTimeout(() => { aspectCorrecting = false; }, 150);
   }
 }
@@ -446,6 +463,10 @@ loadPorts();
 // Build immediately with CSS defaults so keys are always visible,
 // then let ResizeObserver scale to fit the actual container size.
 buildKeyboard();
+appWindow.innerSize().then(s => appWindow.scaleFactor().then(sf => {
+  prevLogW = s.width / sf;
+  prevLogH = s.height / sf;
+}));
 
 new ResizeObserver(() => {
   updateKeyDimensions();
