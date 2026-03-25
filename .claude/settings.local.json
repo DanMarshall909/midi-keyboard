@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cargo --version)",
+      "Bash(rustc --version)",
+      "Bash(npm --version)",
+      "Bash(cargo tauri:*)",
+      "Bash(npx @tauri-apps/cli --version)"
+    ]
+  }
+}

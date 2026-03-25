@@ -198,6 +198,10 @@ function midiNoteFromKey(key) {
 async function triggerNoteOn(midi, el) {
   if (!connected) return;
   el?.classList.add("active");
+  // Set velocity color: green (low) to dark red (high)
+  const hue = 120 * (1 - (velocity - 1) / 126); // 120° (green) to 0° (red)
+  const lightness = 40 + (velocity - 1) / 126 * 20; // lighter to slightly darker
+  el?.style.setProperty("--velocity-color", `hsl(${hue}, 100%, ${lightness}%)`);
   try {
     await invoke("note_on", { channel, note: midi, velocity });
   } catch (e) {
@@ -215,13 +219,29 @@ async function triggerNoteOff(midi, el) {
   }
 }
 
-// ── Mod wheel ─────────────────────────────────────────────────────────────────
+// ── Mod wheel (centered, ±127 range) ──────────────────────────────────────────
 function updateModWheel() {
-  const t = modValue / 127;
-  modFill.style.height = `${t * 100}%`;
-  const trackH = modTrack.clientHeight || 80;
-  const gripH  = 18; // matches CSS height
-  modGrip.style.bottom = `${t * (trackH - gripH)}px`;
+  const trackH = modTrack.clientHeight;
+  const gripH  = 18;
+
+  // Center position for value 0
+  const centerPos = (trackH - gripH) / 2;
+
+  if (modValue >= 0) {
+    // Positive: fill upward from center
+    const fillHeight = (modValue / 127) * centerPos;
+    modFill.style.height = `${fillHeight}px`;
+    modFill.style.bottom = `${centerPos}px`;
+  } else {
+    // Negative: fill downward from center
+    const fillHeight = (-modValue / 127) * centerPos;
+    modFill.style.height = `${fillHeight}px`;
+    modFill.style.bottom = "0";
+  }
+
+  // Grip position (centered at 0, extends ±127)
+  const gripPos = centerPos + (modValue / 127) * centerPos;
+  modGrip.style.bottom = `${Math.max(0, Math.min(trackH - gripH, gripPos))}px`;
   modValEl.textContent = modValue;
 }
 
@@ -233,9 +253,13 @@ modTrack.addEventListener("mousedown", (e) => {
 
   function onMove(ev) {
     const dy = startY - ev.clientY; // drag up = positive
-    modValue = Math.max(0, Math.min(127, Math.round(startVal + dy * 127 / trackH)));
+    const centerPos = (trackH - 18) / 2;
+    modValue = Math.round((dy / centerPos) * 127);
+    modValue = Math.max(-127, Math.min(127, modValue + startVal));
     updateModWheel();
-    if (connected) invoke("send_cc", { channel, cc: 1, value: modValue }).catch(() => {});
+    // Map ±127 to MIDI 0-127 for CC
+    const midiValue = Math.round((modValue + 127) / 2);
+    if (connected) invoke("send_cc", { channel, cc: 1, value: midiValue }).catch(() => {});
   }
   function onUp() {
     document.removeEventListener("mousemove", onMove);
@@ -361,9 +385,10 @@ window.addEventListener("keyup", (e) => {
 // Mouse wheel = modulation (CC 1)
 window.addEventListener("wheel", (e) => {
   e.preventDefault();
-  modValue = Math.max(0, Math.min(127, modValue - Math.sign(e.deltaY) * 5));
+  modValue = Math.max(-127, Math.min(127, modValue - Math.sign(e.deltaY) * 5));
   updateModWheel();
-  if (connected) invoke("send_cc", { channel, cc: 1, value: modValue }).catch(() => {});
+  const midiValue = Math.round((modValue + 127) / 2);
+  if (connected) invoke("send_cc", { channel, cc: 1, value: midiValue }).catch(() => {});
 }, { passive: false });
 
 // Middle click = reset modulation
@@ -372,7 +397,7 @@ window.addEventListener("auxclick", (e) => {
   e.preventDefault();
   modValue = 0;
   updateModWheel();
-  if (connected) invoke("send_cc", { channel, cc: 1, value: 0 }).catch(() => {});
+  if (connected) invoke("send_cc", { channel, cc: 1, value: 64 }).catch(() => {});
 });
 
 // Release all held notes on window blur

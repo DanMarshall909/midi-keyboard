@@ -58,7 +58,7 @@ body {
 #control-bar {
   display: flex;
   align-items: flex-end;
-  gap: 8px;
+  gap: 12px;
   padding: 6px 8px;
   background: rgba(8, 8, 20, 0.6);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
@@ -67,6 +67,17 @@ body {
   overflow-y: hidden;
   scrollbar-width: thin;
   scrollbar-color: rgba(255,255,255,0.1) transparent;
+}
+
+.ctrl-section {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+
+.knobs-section {
+  gap: 6px;
 }
 
 .ctrl-item {
@@ -87,15 +98,6 @@ body {
   width: auto;
   padding: 4px 8px;
   white-space: nowrap;
-}
-
-.mod-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  align-items: center;
-  flex-shrink: 0;
-  justify-content: center;
 }
 
 /* ── Main area ── */
@@ -278,12 +280,23 @@ button:hover { background: rgba(255, 255, 255, 0.15); }
 }
 
 /* ── Mod wheel ── */
+.mod-item {
+  height: var(--key-h);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  flex-shrink: 0;
+  justify-content: center;
+}
+
 #mod-track {
-  width: 20px;
-  height: 80px;
+  width: 30px;
+  flex: 1;
+  max-height: var(--key-h);
   background: rgba(0, 0, 0, 0.45);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 11px;
+  border-radius: 15px;
   position: relative;
   overflow: hidden;
   cursor: ns-resize;
@@ -292,12 +305,11 @@ button:hover { background: rgba(255, 255, 255, 0.15); }
 
 #mod-fill {
   position: absolute;
-  bottom: 0;
   left: 0;
   right: 0;
-  height: 0%;
+  height: 0;
   background: linear-gradient(to top, #1040a0, #2060d0);
-  border-radius: 0 0 11px 11px;
+  border-radius: 15px;
   pointer-events: none;
 }
 
@@ -380,7 +392,15 @@ button:hover { background: rgba(255, 255, 255, 0.15); }
 }
 
 .key-white.active {
-  background: linear-gradient(to bottom, #6aaed8 0%, #9dd0f0 30%, #7cb9e8 100%);
+  background:
+    linear-gradient(
+      135deg,
+      var(--velocity-color, #90EE90) 0%,
+      var(--velocity-color, #90EE90) 100%
+    ),
+    linear-gradient(to bottom, #f0f0eb 0%, #fafaf7 8%, #ebebE6 70%, #d4d4cc 100%);
+  background-blend-mode: overlay;
+  opacity: 0.5;
   color: #1a3a5a;
   box-shadow:
     inset 1px 0 0 rgba(255, 255, 255, 0.4),
@@ -426,7 +446,15 @@ button:hover { background: rgba(255, 255, 255, 0.15); }
 }
 
 .key-black.active {
-  background: linear-gradient(to bottom, #1a5cc8 0%, #2979ff 40%, #1a5cc8 100%);
+  background:
+    linear-gradient(
+      135deg,
+      var(--velocity-color, #90EE90) 0%,
+      var(--velocity-color, #90EE90) 100%
+    ),
+    linear-gradient(to bottom, #555 0%, #2a2a2a 12%, #1a1a1a 60%, #111 100%);
+  background-blend-mode: overlay;
+  opacity: 0.5;
   color: #aad4ff;
   box-shadow:
     inset 1px 0 0 rgba(255, 255, 255, 0.2),
