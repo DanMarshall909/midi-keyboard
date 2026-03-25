@@ -204,11 +204,26 @@ button:hover { background: rgba(255, 255, 255, 0.15); }
 
 #port-select { min-width: 80px; width: auto; }
 
+#octave-display {
+  font-family: "Courier New", monospace;
+  font-size: 16px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #0f0;
+  text-shadow: 0 0 2px rgba(0, 255, 0, 0.5);
+  background: rgba(0, 30, 0, 0.8);
+  border: 1px solid rgba(0, 255, 0, 0.3);
+  border-radius: 2px;
+  padding: 3px 8px;
+  min-width: 40px;
+  text-align: center;
+}
+
 #oct-down, #oct-up {
   padding: 1px 3px;
-  font-size: 11px;
-  height: 18px;
-  width: 18px;
+  font-size: 10px;
+  height: 16px;
+  width: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -216,22 +231,21 @@ button:hover { background: rgba(255, 255, 255, 0.15); }
   min-height: auto;
 }
 
-#octave-display {
-  font-size: 14px;
-  font-weight: 600;
-  min-width: 20px;
-  text-align: center;
-}
-
 .octave-panel {
   flex-direction: column;
   gap: 4px;
 }
 
+.octave-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
 .octave-buttons {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   align-items: center;
 }
 
