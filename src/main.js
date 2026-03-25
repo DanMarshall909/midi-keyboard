@@ -411,6 +411,12 @@ document.getElementById("close-btn").addEventListener("click", () => {
   getCurrentWindow().close();
 });
 
+// Manual drag — data-tauri-drag-region alone isn't reliable without decorations
+document.getElementById("titlebar").addEventListener("mousedown", (e) => {
+  if (e.target.closest("button")) return;
+  getCurrentWindow().startDragging();
+});
+
 // ── Status helper ─────────────────────────────────────────────────────────────
 function setStatus(msg, type = "") {
   statusEl.textContent = msg;
@@ -419,12 +425,15 @@ function setStatus(msg, type = "") {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 octaveDisplay.textContent = baseOctave;
-updateKeyDimensions();
-buildKeyboard();
 loadPorts();
 
-// Rescale keyboard whenever the window is resized
-new ResizeObserver(() => {
+// Wait for first paint so clientWidth/clientHeight are available
+requestAnimationFrame(() => {
   updateKeyDimensions();
   buildKeyboard();
-}).observe(keyboardContainer);
+
+  new ResizeObserver(() => {
+    updateKeyDimensions();
+    buildKeyboard();
+  }).observe(keyboardContainer);
+});

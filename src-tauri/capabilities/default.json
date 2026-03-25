@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "Default capabilities for the MIDI keyboard app",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": ["core:default", "core:window:allow-start-dragging"]
 }
