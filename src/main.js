@@ -590,19 +590,23 @@ document.getElementById("close-btn").addEventListener("click", () => {
 });
 
 // ── Zoom controls ─────────────────────────────────────────────────────────────
-let zoomLevel = 1;
+let zoomLevel = parseFloat(localStorage.getItem("zoomLevel")) || 1;
 let baseWidth = 860;
 let baseHeight = 290;
 
 const appEl = document.getElementById("app");
 
 async function applyZoom() {
-  appEl.style.transform = `scale(${zoomLevel})`;
-  appEl.style.transformOrigin = "top left";
   const newWidth = Math.round(baseWidth * zoomLevel);
   const newHeight = Math.round(baseHeight * zoomLevel);
   await appWindow.setSize(new LogicalSize(newWidth, newHeight));
+  appEl.style.transform = `scale(${zoomLevel})`;
+  appEl.style.transformOrigin = "top left";
+  localStorage.setItem("zoomLevel", zoomLevel.toFixed(2));
 }
+
+// Apply saved zoom level on startup
+applyZoom();
 
 window.addEventListener("keydown", (e) => {
   if (!e.ctrlKey && !e.metaKey) return;
