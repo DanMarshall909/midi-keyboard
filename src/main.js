@@ -301,12 +301,18 @@ window.addEventListener("keyup", (e) => {
   triggerNoteOff(midi, noteToEl[midi]);
 });
 
-// Mouse wheel = modulation (CC 1)
+// Mouse wheel = modulation (CC 1); right-click resets to 0
 window.addEventListener("wheel", (e) => {
   e.preventDefault();
   modValue = Math.max(0, Math.min(127, modValue - Math.sign(e.deltaY) * 5));
   if (connected) invoke("send_cc", { channel, cc: 1, value: modValue }).catch(() => {});
 }, { passive: false });
+
+window.addEventListener("click", (e) => {
+  if (e.button !== 0) return;
+  modValue = 0;
+  if (connected) invoke("send_cc", { channel, cc: 1, value: 0 }).catch(() => {});
+});
 
 // Release all held notes when window loses focus
 window.addEventListener("blur", () => {
