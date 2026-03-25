@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MIDI Keyboard</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <div id="toolbar">
+        <div id="port-section">
+          <select id="port-select">
+            <option value="">-- Select MIDI Output --</option>
+          </select>
+          <button id="refresh-btn" title="Refresh ports">⟳</button>
+        </div>
+        <div id="controls">
+          <label>
+            Oct
+            <button id="oct-down">−</button>
+            <span id="octave-display">4</span>
+            <button id="oct-up">+</button>
+          </label>
+          <label>
+            Vel
+            <input id="velocity" type="range" min="1" max="127" value="100" />
+            <span id="velocity-display">100</span>
+          </label>
+          <label>
+            Ch
+            <select id="channel-select">
+              <!-- 1–16 populated by JS -->
+            </select>
+          </label>
+        </div>
+        <div id="status"></div>
+      </div>
+
+      <div id="keyboard-container">
+        <div id="keyboard">
+          <!-- Keys rendered by JS -->
+        </div>
+      </div>
+
+      <div id="hint">
+        z s x d c v g b h n j m &nbsp;|&nbsp; q 2 w 3 e r 5 t 6 y 7 u i
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

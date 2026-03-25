@@ -1,0 +1,13 @@
+node_modules/
+dist/
+app-icon.png
+
+# Tauri build output
+src-tauri/target/
+
+# Generated Android/iOS assets (regenerate with: npm run tauri icon <source>)
+src-tauri/icons/android/
+src-tauri/icons/ios/
+
+# Generated Tauri schemas/codegen (created at build time)
+src-tauri/gen/
