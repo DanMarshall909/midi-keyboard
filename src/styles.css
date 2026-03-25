@@ -95,7 +95,6 @@ body {
   flex-direction: row;
   gap: 4px;
   align-items: center;
-  min-height: 50px;
 }
 
 .ctrl-item {
