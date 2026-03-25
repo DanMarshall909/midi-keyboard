@@ -117,8 +117,9 @@ const velocitySlider  = document.getElementById("velocity");
 const velocityDisplay = document.getElementById("velocity-display");
 const channelSelect   = document.getElementById("channel-select");
 const patchSelect     = document.getElementById("patch-select");
-const statusEl        = document.getElementById("status");
-const keyboardEl      = document.getElementById("keyboard");
+const statusEl           = document.getElementById("status");
+const keyboardEl         = document.getElementById("keyboard");
+const keyboardContainer  = document.getElementById("keyboard-container");
 
 // ── Piano layout ──────────────────────────────────────────────────────────────
 // 25 keys: C4..C6 (2 full octaves + top C)
@@ -198,6 +199,7 @@ function updateKeyDimensions() {
   const totalWhiteKeys = 15;
   const w = keyboardContainer.clientWidth;
   const h = keyboardContainer.clientHeight;
+  if (w < 10 || h < 10) return; // container not laid out yet — keep CSS defaults
   WHITE_KEY_WIDTH = w / totalWhiteKeys;
   const keyH = Math.min(h * 0.95, WHITE_KEY_WIDTH * 3.6);
   const root = document.documentElement;
@@ -427,13 +429,11 @@ function setStatus(msg, type = "") {
 octaveDisplay.textContent = baseOctave;
 loadPorts();
 
-// Wait for first paint so clientWidth/clientHeight are available
-requestAnimationFrame(() => {
+// Build immediately with CSS defaults so keys are always visible,
+// then let ResizeObserver scale to fit the actual container size.
+buildKeyboard();
+
+new ResizeObserver(() => {
   updateKeyDimensions();
   buildKeyboard();
-
-  new ResizeObserver(() => {
-    updateKeyDimensions();
-    buildKeyboard();
-  }).observe(keyboardContainer);
-});
+}).observe(keyboardContainer);
