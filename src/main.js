@@ -199,22 +199,6 @@ async function triggerNoteOn(midi, el) {
   if (!connected) return;
   el?.classList.add("active");
 
-  // Calculate velocity color: green (low) → yellow (mid) → dark red (high)
-  // Velocity 1-127 maps to hue 120° (green) → 60° (yellow) → 0° (red)
-  const hue = 120 * (1 - (velocity - 1) / 126);
-  const saturation = 100;
-  const lightness = 45 + Math.min(20, (velocity - 1) / 126 * 15);
-  const ledColor = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-
-  // Create LED indicator
-  const led = document.createElement("div");
-  led.className = "key-led";
-  led.style.setProperty("--led-color", ledColor);
-  el?.appendChild(led);
-
-  // Remove LED after animation completes
-  setTimeout(() => led.remove(), 800);
-
   try {
     await invoke("note_on", { channel, note: midi, velocity });
   } catch (e) {
