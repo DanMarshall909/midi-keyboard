@@ -644,4 +644,5 @@ appWindow.innerSize().then(s => appWindow.scaleFactor().then(sf => {
 new ResizeObserver(() => {
   updateKeyDimensions();
   buildKeyboard();
+  updateModWheel();
 }).observe(keyboardContainer);
