@@ -598,7 +598,7 @@ const appEl = document.getElementById("app");
 
 async function applyZoom() {
   appEl.style.transform = `scale(${zoomLevel})`;
-  appEl.style.transformOrigin = "top center";
+  appEl.style.transformOrigin = "top left";
   const newWidth = Math.round(baseWidth * zoomLevel);
   const newHeight = Math.round(baseHeight * zoomLevel);
   await appWindow.setSize(new LogicalSize(newWidth, newHeight));
