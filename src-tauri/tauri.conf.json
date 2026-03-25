@@ -1,7 +1,7 @@
 {
-  "productName": "midi-keyboard",
+  "productName": "Qwertone",
   "version": "0.1.0",
-  "identifier": "com.midi-keyboard",
+  "identifier": "com.qwertone",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",

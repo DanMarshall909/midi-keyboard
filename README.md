@@ -1,4 +1,4 @@
-# MIDI Keyboard
+# Qwertone
 
 [![GitHub Release](https://img.shields.io/github/v/release/DanMarshall909/midi-keyboard)](https://github.com/DanMarshall909/midi-keyboard/releases/latest)
 
