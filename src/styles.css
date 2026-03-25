@@ -308,7 +308,7 @@ button:hover { background: rgba(255, 255, 255, 0.15); }
   left: 0;
   right: 0;
   height: 0;
-  background: linear-gradient(to top, #1040a0, #2060d0);
+  background: transparent;
   border-radius: 15px;
   pointer-events: none;
 }
@@ -392,21 +392,42 @@ button:hover { background: rgba(255, 255, 255, 0.15); }
 }
 
 .key-white.active {
-  background:
-    linear-gradient(
-      135deg,
-      var(--velocity-color, #90EE90) 0%,
-      var(--velocity-color, #90EE90) 100%
-    ),
-    linear-gradient(to bottom, #f0f0eb 0%, #fafaf7 8%, #ebebE6 70%, #d4d4cc 100%);
-  background-blend-mode: overlay;
-  opacity: 0.5;
+  background: linear-gradient(
+    to bottom,
+    #f0f0eb 0%, #fafaf7 8%, #ebebE6 70%, #d4d4cc 100%
+  );
   color: #1a3a5a;
   box-shadow:
     inset 1px 0 0 rgba(255, 255, 255, 0.4),
     inset 0 4px 8px rgba(0, 0, 0, 0.2),
     1px 2px 3px rgba(0, 0, 0, 0.2);
   transform: translateY(2px);
+}
+
+/* ── LED indicators ── */
+.key-led {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--led-color, #90EE90);
+  box-shadow: 0 0 8px var(--led-color, #90EE90);
+  pointer-events: none;
+  animation: ledFade 0.8s ease-out forwards;
+}
+
+@keyframes ledFade {
+  0% {
+    opacity: 1;
+    box-shadow: 0 0 12px var(--led-color, #90EE90);
+  }
+  100% {
+    opacity: 0;
+    box-shadow: 0 0 2px var(--led-color, #90EE90);
+  }
 }
 
 /* ── Black keys ── */
@@ -446,15 +467,10 @@ button:hover { background: rgba(255, 255, 255, 0.15); }
 }
 
 .key-black.active {
-  background:
-    linear-gradient(
-      135deg,
-      var(--velocity-color, #90EE90) 0%,
-      var(--velocity-color, #90EE90) 100%
-    ),
-    linear-gradient(to bottom, #555 0%, #2a2a2a 12%, #1a1a1a 60%, #111 100%);
-  background-blend-mode: overlay;
-  opacity: 0.5;
+  background: linear-gradient(
+    to bottom,
+    #555 0%, #2a2a2a 12%, #1a1a1a 60%, #111 100%
+  );
   color: #aad4ff;
   box-shadow:
     inset 1px 0 0 rgba(255, 255, 255, 0.2),
