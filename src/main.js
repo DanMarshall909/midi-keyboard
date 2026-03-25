@@ -353,6 +353,35 @@ patchSelect.addEventListener("change", async () => {
   }
 });
 
+// ── CC controls ───────────────────────────────────────────────────────────────
+for (const slider of document.querySelectorAll(".cc-slider")) {
+  const valDisplay = slider.nextElementSibling;
+  slider.addEventListener("input", async () => {
+    const value = parseInt(slider.value);
+    valDisplay.textContent = value;
+    if (!connected) return;
+    try {
+      await invoke("send_cc", { channel, cc: parseInt(slider.dataset.cc), value });
+    } catch (e) {
+      setStatus(String(e), "error");
+    }
+  });
+}
+
+const sustainBtn = document.getElementById("sustain-btn");
+let sustainOn = false;
+sustainBtn.addEventListener("click", async () => {
+  sustainOn = !sustainOn;
+  sustainBtn.dataset.active = sustainOn;
+  sustainBtn.classList.toggle("active", sustainOn);
+  if (!connected) return;
+  try {
+    await invoke("send_cc", { channel, cc: 64, value: sustainOn ? 127 : 0 });
+  } catch (e) {
+    setStatus(String(e), "error");
+  }
+});
+
 // ── Status helper ─────────────────────────────────────────────────────────────
 function setStatus(msg, type = "") {
   statusEl.textContent = msg;
