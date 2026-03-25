@@ -14,10 +14,95 @@ const KEY_MAP = {
   i: 24, // C two octaves up
 };
 
+// ── General MIDI patch names (program 0–127) ──────────────────────────────────
+const GM_PATCHES = [
+  // Piano
+  ["Piano", [
+    "Acoustic Grand Piano", "Bright Acoustic Piano", "Electric Grand Piano",
+    "Honky-tonk Piano", "Electric Piano 1", "Electric Piano 2", "Harpsichord", "Clavi",
+  ]],
+  // Chromatic Perc
+  ["Chromatic Perc", [
+    "Celesta", "Glockenspiel", "Music Box", "Vibraphone",
+    "Marimba", "Xylophone", "Tubular Bells", "Dulcimer",
+  ]],
+  // Organ
+  ["Organ", [
+    "Drawbar Organ", "Percussive Organ", "Rock Organ", "Church Organ",
+    "Reed Organ", "Accordion", "Harmonica", "Tango Accordion",
+  ]],
+  // Guitar
+  ["Guitar", [
+    "Nylon Guitar", "Steel Guitar", "Jazz Guitar", "Clean Guitar",
+    "Muted Guitar", "Overdriven Guitar", "Distortion Guitar", "Guitar Harmonics",
+  ]],
+  // Bass
+  ["Bass", [
+    "Acoustic Bass", "Finger Bass", "Pick Bass", "Fretless Bass",
+    "Slap Bass 1", "Slap Bass 2", "Synth Bass 1", "Synth Bass 2",
+  ]],
+  // Strings
+  ["Strings", [
+    "Violin", "Viola", "Cello", "Contrabass",
+    "Tremolo Strings", "Pizzicato Strings", "Orchestral Harp", "Timpani",
+  ]],
+  // Ensemble
+  ["Ensemble", [
+    "String Ensemble 1", "String Ensemble 2", "Synth Strings 1", "Synth Strings 2",
+    "Choir Aahs", "Voice Oohs", "Synth Voice", "Orchestra Hit",
+  ]],
+  // Brass
+  ["Brass", [
+    "Trumpet", "Trombone", "Tuba", "Muted Trumpet",
+    "French Horn", "Brass Section", "Synth Brass 1", "Synth Brass 2",
+  ]],
+  // Reed
+  ["Reed", [
+    "Soprano Sax", "Alto Sax", "Tenor Sax", "Baritone Sax",
+    "Oboe", "English Horn", "Bassoon", "Clarinet",
+  ]],
+  // Pipe
+  ["Pipe", [
+    "Piccolo", "Flute", "Recorder", "Pan Flute",
+    "Blown Bottle", "Shakuhachi", "Whistle", "Ocarina",
+  ]],
+  // Synth Lead
+  ["Synth Lead", [
+    "Square Lead", "Sawtooth Lead", "Calliope Lead", "Chiff Lead",
+    "Charang Lead", "Voice Lead", "Fifths Lead", "Bass+Lead",
+  ]],
+  // Synth Pad
+  ["Synth Pad", [
+    "New Age Pad", "Warm Pad", "Polysynth Pad", "Choir Pad",
+    "Bowed Pad", "Metallic Pad", "Halo Pad", "Sweep Pad",
+  ]],
+  // Synth FX
+  ["Synth FX", [
+    "Rain FX", "Soundtrack FX", "Crystal FX", "Atmosphere FX",
+    "Brightness FX", "Goblins FX", "Echoes FX", "Sci-fi FX",
+  ]],
+  // Ethnic
+  ["Ethnic", [
+    "Sitar", "Banjo", "Shamisen", "Koto",
+    "Kalimba", "Bag Pipe", "Fiddle", "Shanai",
+  ]],
+  // Percussive
+  ["Percussive", [
+    "Tinkle Bell", "Agogo", "Steel Drums", "Woodblock",
+    "Taiko Drum", "Melodic Tom", "Synth Drum", "Reverse Cymbal",
+  ]],
+  // Sound FX
+  ["Sound FX", [
+    "Guitar Fret Noise", "Breath Noise", "Seashore", "Bird Tweet",
+    "Telephone Ring", "Helicopter", "Applause", "Gunshot",
+  ]],
+];
+
 // ── State ─────────────────────────────────────────────────────────────────────
 let baseOctave = 4;   // C4 = MIDI 60
 let velocity   = 100;
 let channel    = 0;   // 0-indexed (sent as channel 0 = MIDI ch 1)
+let patch      = 0;   // GM program number 0–127
 let connected  = false;
 const heldKeys = new Set(); // prevent key-repeat retriggering
 
@@ -30,6 +115,7 @@ const octUpBtn        = document.getElementById("oct-up");
 const velocitySlider  = document.getElementById("velocity");
 const velocityDisplay = document.getElementById("velocity-display");
 const channelSelect   = document.getElementById("channel-select");
+const patchSelect     = document.getElementById("patch-select");
 const statusEl        = document.getElementById("status");
 const keyboardEl      = document.getElementById("keyboard");
 
@@ -209,6 +295,7 @@ portSelect.addEventListener("change", async () => {
     const name = await invoke("connect_port", { portIndex: parseInt(idx) });
     connected = true;
     setStatus(`Connected: ${name}`, "connected");
+    await invoke("program_change", { channel, program: patch });
   } catch (e) {
     connected = false;
     setStatus(String(e), "error");
@@ -239,6 +326,31 @@ for (let i = 1; i <= 16; i++) {
 }
 channelSelect.addEventListener("change", () => {
   channel = parseInt(channelSelect.value);
+});
+
+// Populate patch selector with GM optgroups
+let programNumber = 0;
+for (const [groupName, patches] of GM_PATCHES) {
+  const group = document.createElement("optgroup");
+  group.label = groupName;
+  for (const name of patches) {
+    const opt = document.createElement("option");
+    opt.value = programNumber;
+    opt.textContent = `${programNumber + 1}. ${name}`;
+    group.appendChild(opt);
+    programNumber++;
+  }
+  patchSelect.appendChild(group);
+}
+
+patchSelect.addEventListener("change", async () => {
+  patch = parseInt(patchSelect.value);
+  if (!connected) return;
+  try {
+    await invoke("program_change", { channel, program: patch });
+  } catch (e) {
+    setStatus(String(e), "error");
+  }
 });
 
 // ── Status helper ─────────────────────────────────────────────────────────────

@@ -44,7 +44,8 @@ select, input[type="range"] {
   font-size: 12px;
 }
 
-#port-select { width: 200px; }
+#port-select  { width: 200px; }
+#patch-select { width: 180px; }
 
 button {
   background: #2a2a4a;

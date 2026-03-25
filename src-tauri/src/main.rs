@@ -51,6 +51,17 @@ fn note_on(state: State<MidiState>, channel: u8, note: u8, velocity: u8) -> Resu
 }
 
 #[tauri::command]
+fn program_change(state: State<MidiState>, channel: u8, program: u8) -> Result<(), String> {
+    let mut guard = state.connection.lock().unwrap();
+    match guard.as_mut() {
+        Some(conn) => conn
+            .send(&[0xC0 | (channel & 0x0F), program & 0x7F])
+            .map_err(|e| e.to_string()),
+        None => Err("No MIDI port connected".to_string()),
+    }
+}
+
+#[tauri::command]
 fn note_off(state: State<MidiState>, channel: u8, note: u8) -> Result<(), String> {
     let mut guard = state.connection.lock().unwrap();
     match guard.as_mut() {
@@ -72,6 +83,7 @@ fn main() {
             disconnect,
             note_on,
             note_off,
+            program_change,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
