@@ -482,9 +482,9 @@ button:hover { background: rgba(255, 255, 255, 0.15); }
 /* ── LED indicators ── */
 .key-led {
   position: absolute;
-  top: 8px;
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   width: 8px;
   height: 8px;
   border-radius: 50%;
