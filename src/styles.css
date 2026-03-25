@@ -511,33 +511,6 @@ button:hover { background: rgba(255, 255, 255, 0.15); }
   transform: translateY(2px);
 }
 
-/* ── LED indicators ── */
-.key-led {
-  position: absolute;
-  top: 8px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--led-color, #90EE90);
-  box-shadow: 0 0 10px 2px var(--led-color, #90EE90);
-  pointer-events: none;
-  z-index: 10;
-  animation: ledFade 0.8s ease-out forwards;
-}
-
-@keyframes ledFade {
-  0% {
-    opacity: 1;
-    box-shadow: 0 0 12px var(--led-color, #90EE90);
-  }
-  100% {
-    opacity: 0;
-    box-shadow: 0 0 2px var(--led-color, #90EE90);
-  }
-}
-
 /* ── Black keys ── */
 .key-black {
   position: absolute;
