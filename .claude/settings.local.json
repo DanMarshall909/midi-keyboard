@@ -5,7 +5,10 @@
       "Bash(rustc --version)",
       "Bash(npm --version)",
       "Bash(cargo tauri:*)",
-      "Bash(npx @tauri-apps/cli --version)"
+      "Bash(npx @tauri-apps/cli --version)",
+      "Bash(git push:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
