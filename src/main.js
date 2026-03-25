@@ -267,7 +267,8 @@ modTrack.addEventListener("mousedown", (e) => {
   function onMove(ev) {
     const dy = startY - ev.clientY; // drag up = positive
     const centerPos = (trackH - 18) / 2;
-    modValue = Math.round((dy / centerPos) * 127);
+    const sensitivity = 0.35; // finer granularity (3x more precision)
+    modValue = Math.round((dy / centerPos) * 127 * sensitivity);
     modValue = Math.max(-127, Math.min(127, modValue + startVal));
     updateModWheel();
     // Map ±127 to MIDI 0-127 for CC
@@ -620,6 +621,17 @@ document.getElementById("help-close").addEventListener("click", () => {
 });
 helpOverlay.addEventListener("click", (e) => {
   if (e.target === helpOverlay) helpOverlay.classList.add("hidden");
+});
+
+const configOverlay = document.getElementById("config-overlay");
+document.getElementById("config-btn").addEventListener("click", () => {
+  configOverlay.classList.toggle("hidden");
+});
+document.getElementById("config-close").addEventListener("click", () => {
+  configOverlay.classList.add("hidden");
+});
+configOverlay.addEventListener("click", (e) => {
+  if (e.target === configOverlay) configOverlay.classList.add("hidden");
 });
 
 // ── Status helper ─────────────────────────────────────────────────────────────

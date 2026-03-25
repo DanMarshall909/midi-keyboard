@@ -12,6 +12,7 @@
       <div id="titlebar" data-tauri-drag-region>
         <span id="app-title" data-tauri-drag-region>Acoustic Grand Piano</span>
         <div id="titlebar-btns">
+          <button id="config-btn" title="Settings">⚙</button>
           <button id="help-btn" title="Keyboard shortcuts">?</button>
           <button id="close-btn" title="Close">✕</button>
         </div>
@@ -19,18 +20,7 @@
 
       <!-- Control bar (above keyboard) -->
       <div id="control-bar">
-        <!-- Left section: Port & Status -->
-        <div class="ctrl-section">
-          <div class="ctrl-item">
-            <div class="ctrl-row">
-              <select id="port-select"><option value="">-- Port --</option></select>
-              <button id="refresh-btn" title="Refresh ports">⟳</button>
-            </div>
-            <div id="status"></div>
-          </div>
-        </div>
-
-        <!-- Middle section: Octave, Channel, Patch -->
+        <!-- Octave, Patch -->
         <div class="ctrl-section">
           <div class="ctrl-item">
             <div class="ctrl-label">Oct</div>
@@ -39,11 +29,6 @@
               <span id="octave-display">4</span>
               <button id="oct-up">+</button>
             </div>
-          </div>
-
-          <div class="ctrl-item">
-            <div class="ctrl-label">Channel</div>
-            <select id="channel-select"></select>
           </div>
 
           <div class="ctrl-item">
@@ -133,6 +118,34 @@
               <tr><td class="hk">Middle click</td><td>Reset modulation to 0</td></tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- Config modal -->
+      <div id="config-overlay" class="hidden">
+        <div id="config-box">
+          <div id="config-header">
+            <h3>Settings</h3>
+            <button id="config-close">✕</button>
+          </div>
+          <div id="config-body">
+            <div class="cfg-row">
+              <label class="cfg-label">MIDI Port</label>
+              <div class="ctrl-row">
+                <select id="port-select"><option value="">-- Port --</option></select>
+                <button id="refresh-btn" title="Refresh ports">⟳</button>
+              </div>
+              <div id="status"></div>
+            </div>
+            <div class="cfg-row">
+              <label class="cfg-label">Channel</label>
+              <select id="channel-select"></select>
+            </div>
+            <div class="cfg-row">
+              <label class="cfg-label">↑↓ Arrow CC</label>
+              <select id="arrow-cc-select"></select>
+            </div>
+          </div>
         </div>
       </div>
 
