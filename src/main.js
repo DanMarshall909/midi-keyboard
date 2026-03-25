@@ -99,11 +99,13 @@ const GM_PATCHES = [
 ];
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let baseOctave = 4;   // C4 = MIDI 60
-let velocity   = 100;
-let channel    = 0;   // 0-indexed (sent as channel 0 = MIDI ch 1)
-let patch      = 0;   // GM program number 0–127
-let connected  = false;
+let baseOctave   = 4;   // C4 = MIDI 60
+let velocity     = 100;
+let channel      = 0;   // 0-indexed (sent as channel 0 = MIDI ch 1)
+let patch        = 0;   // GM program number 0–127
+let connected    = false;
+let arrowCc      = 10;  // CC number controlled by arrow keys (default: Pan)
+let arrowCcValue = 64;  // current value — 64 = centre for Pan
 const heldKeys = new Set(); // prevent key-repeat retriggering
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
@@ -117,6 +119,7 @@ const velocityDisplay = document.getElementById("velocity-display");
 const channelSelect   = document.getElementById("channel-select");
 const patchSelect     = document.getElementById("patch-select");
 const statusEl           = document.getElementById("status");
+const arrowCcSelect      = document.getElementById("arrow-cc-select");
 const keyboardEl         = document.getElementById("keyboard");
 const keyboardContainer  = document.getElementById("keyboard-container");
 
@@ -242,7 +245,36 @@ async function triggerNoteOff(midi, el) {
 
 // ── Keyboard events ───────────────────────────────────────────────────────────
 window.addEventListener("keydown", (e) => {
-  if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+  // Space = momentary sustain pedal
+  if (e.key === " " && !e.repeat) {
+    e.preventDefault();
+    sustainBtn.classList.add("active");
+    if (connected) invoke("send_cc", { channel, cc: 64, value: 127 }).catch(() => {});
+    return;
+  }
+
+  // F1–F9 = select octave 0–8
+  if (/^F[1-9]$/.test(e.key) && !e.repeat) {
+    e.preventDefault();
+    baseOctave = parseInt(e.key.slice(1)) - 1;
+    octaveDisplay.textContent = baseOctave;
+    buildKeyboard();
+    return;
+  }
+
+  // Arrow keys = step the configurable arrow CC (repeats while held)
+  if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+    e.preventDefault();
+    const delta = (e.key === "ArrowUp" || e.key === "ArrowRight") ? 5 : -5;
+    arrowCcValue = Math.max(0, Math.min(127, arrowCcValue + delta));
+    if (connected) invoke("send_cc", { channel, cc: arrowCc, value: arrowCcValue }).catch(() => {});
+    return;
+  }
+
+  // Piano keys (no repeat)
+  if (e.repeat) return;
   const key = e.key.toLowerCase();
   if (heldKeys.has(key)) return;
   const midi = midiNoteFromKey(key);
@@ -253,6 +285,13 @@ window.addEventListener("keydown", (e) => {
 });
 
 window.addEventListener("keyup", (e) => {
+  // Space = release sustain
+  if (e.key === " ") {
+    sustainBtn.classList.remove("active");
+    if (connected) invoke("send_cc", { channel, cc: 64, value: 0 }).catch(() => {});
+    return;
+  }
+
   const key = e.key.toLowerCase();
   heldKeys.delete(key);
   const midi = midiNoteFromKey(key);
@@ -263,6 +302,8 @@ window.addEventListener("keyup", (e) => {
 
 // Release all held notes when window loses focus
 window.addEventListener("blur", () => {
+  sustainBtn.classList.remove("active");
+  if (connected) invoke("send_cc", { channel, cc: 64, value: 0 }).catch(() => {});
   for (const key of heldKeys) {
     const midi = midiNoteFromKey(key);
     if (midi !== null) triggerNoteOff(midi, noteToEl[midi]);
@@ -396,6 +437,25 @@ sustainBtn.addEventListener("click", async () => {
   } catch (e) {
     setStatus(String(e), "error");
   }
+});
+
+// Arrow-CC selector: common CCs + "Other" text input
+const ARROW_CC_OPTIONS = [
+  [1, "1 – Mod Wheel"], [7, "7 – Volume"], [10, "10 – Pan"],
+  [11, "11 – Expression"], [64, "64 – Sustain"], [71, "71 – Resonance"],
+  [74, "74 – Brightness"], [91, "91 – Reverb"], [93, "93 – Chorus"],
+];
+for (const [num, label] of ARROW_CC_OPTIONS) {
+  const opt = document.createElement("option");
+  opt.value = num;
+  opt.textContent = label;
+  arrowCcSelect.appendChild(opt);
+}
+arrowCcSelect.value = String(arrowCc);
+arrowCcSelect.addEventListener("change", () => {
+  arrowCc = parseInt(arrowCcSelect.value);
+  // Pan centres at 64; everything else starts at 0
+  arrowCcValue = arrowCc === 10 ? 64 : 0;
 });
 
 // ── Aspect-ratio enforcement ──────────────────────────────────────────────────
