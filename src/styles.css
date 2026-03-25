@@ -125,7 +125,7 @@ body {
   min-height: 0;
   gap: 4px;
   padding: 0 6px 6px 6px;
-  align-items: flex-start;
+  align-items: center;
 }
 
 .ctrl-group {
