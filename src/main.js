@@ -110,7 +110,6 @@ const modTrack        = document.getElementById("mod-track");
 const modFill         = document.getElementById("mod-fill");
 const modGrip         = document.getElementById("mod-grip");
 const modValEl        = document.getElementById("mod-val");
-const sustainBtn      = document.getElementById("sustain-btn");
 
 // ── Piano layout ──────────────────────────────────────────────────────────────
 const WHITE_OFFSETS = [0, 2, 4, 5, 7, 9, 11];
@@ -351,7 +350,7 @@ window.addEventListener("keydown", (e) => {
 
   if (e.key === " " && !e.repeat) {
     e.preventDefault();
-    sustainBtn.classList.add("active");
+    sustainOn = true;
     if (connected) invoke("send_cc", { channel, cc: 64, value: 127 }).catch(() => {});
     return;
   }
@@ -384,7 +383,7 @@ window.addEventListener("keydown", (e) => {
 
 window.addEventListener("keyup", (e) => {
   if (e.key === " ") {
-    sustainBtn.classList.remove("active");
+    sustainOn = false;
     if (connected) invoke("send_cc", { channel, cc: 64, value: 0 }).catch(() => {});
     return;
   }
@@ -417,7 +416,7 @@ window.addEventListener("auxclick", (e) => {
 
 // Release all held notes on window blur
 window.addEventListener("blur", () => {
-  sustainBtn.classList.remove("active");
+  sustainOn = false;
   if (connected) {
     invoke("send_cc", { channel, cc: 64, value: 0 }).catch(() => {});
     modValue = 0;
@@ -525,18 +524,8 @@ patchSelect.addEventListener("change", async () => {
   }
 });
 
-// Sustain toggle button
+// Sustain state (triggered by keyboard, no button)
 let sustainOn = false;
-sustainBtn.addEventListener("click", async () => {
-  sustainOn = !sustainOn;
-  sustainBtn.classList.toggle("active", sustainOn);
-  if (!connected) return;
-  try {
-    await invoke("send_cc", { channel, cc: 64, value: sustainOn ? 127 : 0 });
-  } catch (e) {
-    setStatus(String(e), "error");
-  }
-});
 
 // Arrow CC selector
 const ARROW_CC_OPTIONS = [
