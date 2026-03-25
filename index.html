@@ -8,14 +8,22 @@
   </head>
   <body>
     <div id="app">
-      <div id="toolbar">
-        <div id="port-section">
-          <select id="port-select">
-            <option value="">-- Select MIDI Output --</option>
-          </select>
-          <button id="refresh-btn" title="Refresh ports">⟳</button>
+      <!-- Drag region / title bar -->
+      <div id="titlebar" data-tauri-drag-region>
+        <span id="app-title" data-tauri-drag-region>MIDI Keyboard</span>
+        <div id="titlebar-btns">
+          <button id="panel-toggle" title="Toggle controls">⚙</button>
+          <button id="close-btn" title="Close">✕</button>
         </div>
-        <div id="controls">
+      </div>
+
+      <!-- Collapsible controls panel -->
+      <div id="panel">
+        <div id="toolbar">
+          <div id="port-section">
+            <select id="port-select"><option value="">-- MIDI Output --</option></select>
+            <button id="refresh-btn" title="Refresh ports">⟳</button>
+          </div>
           <label>
             Oct
             <button id="oct-down">−</button>
@@ -27,39 +35,26 @@
             <input id="velocity" type="range" min="1" max="127" value="100" />
             <span id="velocity-display">100</span>
           </label>
-          <label>
-            Ch
-            <select id="channel-select">
-              <!-- 1–16 populated by JS -->
-            </select>
-          </label>
-          <label>
-            Patch
-            <select id="patch-select">
-              <!-- GM patches populated by JS -->
-            </select>
-          </label>
+          <label>Ch <select id="channel-select"></select></label>
+          <label>Patch <select id="patch-select"></select></label>
+          <div id="status"></div>
         </div>
-        <div id="status"></div>
-      </div>
-
-      <div id="cc-controls">
-        <label>Mod <input class="cc-slider" type="range" min="0" max="127" value="0"   data-cc="1"  /> <span class="cc-val">0</span></label>
-        <label>Pan <input class="cc-slider" type="range" min="0" max="127" value="64"  data-cc="10" /> <span class="cc-val">64</span></label>
-        <label>Expr <input class="cc-slider" type="range" min="0" max="127" value="127" data-cc="11" /> <span class="cc-val">127</span></label>
-        <label>Rev <input class="cc-slider" type="range" min="0" max="127" value="0"   data-cc="91" /> <span class="cc-val">0</span></label>
-        <label>Cho <input class="cc-slider" type="range" min="0" max="127" value="0"   data-cc="93" /> <span class="cc-val">0</span></label>
-        <button id="sustain-btn" data-active="false">Sustain</button>
-      </div>
-
-      <div id="keyboard-container">
-        <div id="keyboard">
-          <!-- Keys rendered by JS -->
+        <div id="cc-controls">
+          <label>Mod  <input class="cc-slider" type="range" min="0" max="127" value="0"   data-cc="1"  /><span class="cc-val">0</span></label>
+          <label>Pan  <input class="cc-slider" type="range" min="0" max="127" value="64"  data-cc="10" /><span class="cc-val">64</span></label>
+          <label>Expr <input class="cc-slider" type="range" min="0" max="127" value="127" data-cc="11" /><span class="cc-val">127</span></label>
+          <label>Rev  <input class="cc-slider" type="range" min="0" max="127" value="0"   data-cc="91" /><span class="cc-val">0</span></label>
+          <label>Cho  <input class="cc-slider" type="range" min="0" max="127" value="0"   data-cc="93" /><span class="cc-val">0</span></label>
+          <button id="sustain-btn">Sustain</button>
         </div>
       </div>
 
-      <div id="hint">
-        z s x d c v g b h n j m &nbsp;|&nbsp; q 2 w 3 e r 5 t 6 y 7 u i
+      <!-- Keyboard -->
+      <div id="keyboard-area">
+        <div id="keyboard-container">
+          <div id="keyboard"></div>
+        </div>
+        <div id="hint">z s x d c v g b h n j m &nbsp;|&nbsp; q 2 w 3 e r 5 t 6 y 7 u i</div>
       </div>
     </div>
 

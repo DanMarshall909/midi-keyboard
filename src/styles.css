@@ -1,11 +1,14 @@
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --key-w: 50px;
+  --key-h: 180px;
+  --key-bw: 30px;
+  --key-bh: 110px;
 }
 
 body {
-  background: #1a1a2e;
+  background: transparent;
   color: #e0e0e0;
   font-family: system-ui, sans-serif;
   font-size: 13px;
@@ -17,95 +20,107 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  padding: 10px 12px 6px;
-  gap: 8px;
+  background: rgba(14, 14, 24, 0.9);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  overflow: hidden;
 }
 
-/* ── Toolbar ── */
-#toolbar {
+/* ── Title bar ── */
+#titlebar {
   display: flex;
   align-items: center;
-  gap: 16px;
+  padding: 0 8px;
+  height: 30px;
+  background: rgba(8, 8, 18, 0.5);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   flex-shrink: 0;
 }
 
-#port-section {
-  display: flex;
-  align-items: center;
-  gap: 4px;
+#app-title {
+  flex: 1;
+  font-size: 10px;
+  color: #555;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
 }
 
+#titlebar-btns { display: flex; gap: 4px; }
+
+/* ── Shared form controls ── */
 select, input[type="range"] {
-  background: #2a2a4a;
+  background: rgba(255, 255, 255, 0.07);
   color: #e0e0e0;
-  border: 1px solid #444;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 4px;
   padding: 3px 6px;
   font-size: 12px;
 }
 
-#port-select  { width: 200px; }
-#patch-select { width: 180px; }
-
 button {
-  background: #2a2a4a;
+  background: rgba(255, 255, 255, 0.07);
   color: #e0e0e0;
-  border: 1px solid #444;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 4px;
   padding: 3px 8px;
   cursor: pointer;
   font-size: 12px;
 }
 
-button:hover { background: #3a3a6a; }
+button:hover { background: rgba(255, 255, 255, 0.15); }
 
-#controls {
+#panel-toggle, #close-btn {
+  width: 22px;
+  height: 22px;
+  padding: 0;
   display: flex;
   align-items: center;
-  gap: 12px;
-}
-
-#controls label {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-#oct-down, #oct-up {
-  padding: 2px 7px;
-  font-size: 14px;
-  line-height: 1;
-}
-
-#octave-display, #velocity-display {
-  min-width: 22px;
-  text-align: center;
-}
-
-#velocity { width: 80px; }
-
-#channel-select { width: 50px; }
-
-#status {
-  margin-left: auto;
+  justify-content: center;
+  border-radius: 50%;
   font-size: 11px;
-  color: #888;
 }
 
-#status.connected { color: #4caf50; }
-#status.error     { color: #f44336; }
+#panel-toggle.active {
+  background: rgba(41, 121, 255, 0.35);
+  border-color: #2979ff;
+  color: #7ab4ff;
+}
 
-/* ── CC controls ── */
-#cc-controls {
+#close-btn { background: transparent; border-color: transparent; color: #555; }
+#close-btn:hover { background: rgba(244, 67, 54, 0.75); border-color: transparent; color: #fff; }
+
+/* ── Controls panel ── */
+#panel {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 220ms ease, padding 220ms ease, border-color 220ms ease;
+  background: rgba(10, 10, 22, 0.55);
+  border-bottom: 1px solid transparent;
+  padding: 0 12px;
+  flex-shrink: 0;
+}
+
+#panel.open {
+  max-height: 130px;
+  border-bottom-color: rgba(255, 255, 255, 0.05);
+  padding: 8px 12px;
+}
+
+#toolbar {
   display: flex;
   align-items: center;
-  gap: 14px;
-  flex-shrink: 0;
-  padding: 4px 2px;
-  border-top: 1px solid #2a2a4a;
+  gap: 10px;
+  margin-bottom: 7px;
+  flex-wrap: wrap;
 }
 
-#cc-controls label {
+#port-section { display: flex; align-items: center; gap: 4px; }
+#port-select  { width: 180px; }
+#patch-select { width: 160px; }
+
+#toolbar label, #cc-controls label {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -113,57 +128,65 @@ button:hover { background: #3a3a6a; }
   color: #aaa;
 }
 
-.cc-slider { width: 80px; }
+#oct-down, #oct-up { padding: 2px 6px; font-size: 13px; }
+#octave-display, #velocity-display { min-width: 20px; text-align: center; font-size: 12px; }
+#velocity { width: 70px; }
+#channel-select { width: 46px; }
 
-.cc-val {
-  min-width: 24px;
-  text-align: right;
-  font-size: 11px;
-  color: #666;
-}
+#status { margin-left: auto; font-size: 11px; color: #666; }
+#status.connected { color: #4caf50; }
+#status.error     { color: #f44336; }
 
-#sustain-btn { margin-left: auto; }
+#cc-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.cc-slider { width: 72px; }
+.cc-val { min-width: 22px; text-align: right; font-size: 11px; color: #555; }
 
 #sustain-btn.active {
-  background: #2979ff;
+  background: rgba(41, 121, 255, 0.5);
   border-color: #2979ff;
-  color: #fff;
+  color: #aad4ff;
 }
 
-/* ── Piano keyboard ── */
+/* ── Keyboard area ── */
+#keyboard-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 8px 4px;
+  min-height: 0;
+}
+
 #keyboard-container {
+  flex: 1;
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  flex: 1;
   overflow: hidden;
   perspective: 600px;
+  min-height: 0;
 }
 
 #keyboard {
   position: relative;
-  height: 180px;
+  height: var(--key-h);
   display: flex;
   transform: rotateX(4deg);
   transform-origin: top center;
-  filter: drop-shadow(0 12px 18px rgba(0,0,0,0.6));
+  filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.6));
 }
 
+/* ── White keys ── */
 .key-white {
   position: relative;
-  width: 50px;
-  height: 180px;
+  width: var(--key-w);
+  height: var(--key-h);
   background: linear-gradient(
     to bottom,
-    #f0f0eb 0%,
-    #fafaf7 8%,
-    #ebebE6 70%,
-    #d4d4cc 100%
+    #f0f0eb 0%, #fafaf7 8%, #ebebE6 70%, #d4d4cc 100%
   );
   border-left: 1px solid #bbb;
   border-right: 1px solid #999;
   border-bottom: 1px solid #888;
-  border-top: none;
   border-radius: 0 0 6px 6px;
   cursor: pointer;
   display: flex;
@@ -173,9 +196,9 @@ button:hover { background: #3a3a6a; }
   font-size: 10px;
   color: #999;
   box-shadow:
-    inset 1px 0 0 rgba(255,255,255,0.9),
-    inset -1px 0 0 rgba(0,0,0,0.06),
-    2px 4px 6px rgba(0,0,0,0.25);
+    inset 1px 0 0 rgba(255, 255, 255, 0.9),
+    inset -1px 0 0 rgba(0, 0, 0, 0.06),
+    2px 4px 6px rgba(0, 0, 0, 0.25);
   transition: background 60ms, box-shadow 60ms, transform 60ms;
   flex-shrink: 0;
 }
@@ -183,10 +206,7 @@ button:hover { background: #3a3a6a; }
 .key-white:hover {
   background: linear-gradient(
     to bottom,
-    #e8e8e2 0%,
-    #f2f2ee 8%,
-    #e2e2dc 70%,
-    #ccccc4 100%
+    #e8e8e2 0%, #f2f2ee 8%, #e2e2dc 70%, #ccccc4 100%
   );
 }
 
@@ -194,22 +214,20 @@ button:hover { background: #3a3a6a; }
   background: linear-gradient(to bottom, #6aaed8 0%, #9dd0f0 30%, #7cb9e8 100%);
   color: #1a3a5a;
   box-shadow:
-    inset 1px 0 0 rgba(255,255,255,0.4),
-    inset 0 4px 8px rgba(0,0,0,0.2),
-    1px 2px 3px rgba(0,0,0,0.2);
+    inset 1px 0 0 rgba(255, 255, 255, 0.4),
+    inset 0 4px 8px rgba(0, 0, 0, 0.2),
+    1px 2px 3px rgba(0, 0, 0, 0.2);
   transform: translateY(2px);
 }
 
+/* ── Black keys ── */
 .key-black {
   position: absolute;
-  width: 30px;
-  height: 110px;
+  width: var(--key-bw);
+  height: var(--key-bh);
   background: linear-gradient(
     to bottom,
-    #555 0%,
-    #2a2a2a 12%,
-    #1a1a1a 60%,
-    #111 100%
+    #555 0%, #2a2a2a 12%, #1a1a1a 60%, #111 100%
   );
   border-left: 1px solid #555;
   border-right: 1px solid #111;
@@ -224,9 +242,9 @@ button:hover { background: #3a3a6a; }
   font-size: 9px;
   color: #555;
   box-shadow:
-    inset 1px 0 0 rgba(255,255,255,0.12),
-    inset -1px 0 0 rgba(0,0,0,0.4),
-    3px 6px 10px rgba(0,0,0,0.6),
+    inset 1px 0 0 rgba(255, 255, 255, 0.12),
+    inset -1px 0 0 rgba(0, 0, 0, 0.4),
+    3px 6px 10px rgba(0, 0, 0, 0.6),
     1px 1px 0 #000;
   transition: background 60ms, box-shadow 60ms, transform 60ms;
 }
@@ -234,10 +252,7 @@ button:hover { background: #3a3a6a; }
 .key-black:hover {
   background: linear-gradient(
     to bottom,
-    #666 0%,
-    #333 12%,
-    #222 60%,
-    #181818 100%
+    #666 0%, #333 12%, #222 60%, #181818 100%
   );
 }
 
@@ -245,9 +260,9 @@ button:hover { background: #3a3a6a; }
   background: linear-gradient(to bottom, #1a5cc8 0%, #2979ff 40%, #1a5cc8 100%);
   color: #aad4ff;
   box-shadow:
-    inset 1px 0 0 rgba(255,255,255,0.2),
-    inset 0 3px 6px rgba(0,0,0,0.4),
-    1px 3px 5px rgba(0,0,0,0.5);
+    inset 1px 0 0 rgba(255, 255, 255, 0.2),
+    inset 0 3px 6px rgba(0, 0, 0, 0.4),
+    1px 3px 5px rgba(0, 0, 0, 0.5);
   transform: translateY(3px);
 }
 
@@ -255,7 +270,8 @@ button:hover { background: #3a3a6a; }
 #hint {
   text-align: center;
   font-size: 11px;
-  color: #555;
+  color: #444;
   letter-spacing: 1px;
+  padding: 2px 0;
   flex-shrink: 0;
 }

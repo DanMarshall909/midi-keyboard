@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 
 // ── Key → MIDI note mapping (GarageBand layout) ──────────────────────────────
 // Offsets are semitones relative to the base octave root (C).
@@ -124,7 +125,7 @@ const keyboardEl      = document.getElementById("keyboard");
 // White key indices within an octave: 0 2 4 5 7 9 11
 // Black key semitones within an octave: 1 3 6 8 10
 const WHITE_OFFSETS = [0, 2, 4, 5, 7, 9, 11];
-const WHITE_KEY_WIDTH = 50; // px, must match CSS
+let WHITE_KEY_WIDTH = 50; // updated dynamically on resize
 
 // Black key positions (left offset from start of octave in white-key units)
 // C# after C(0), D# after D(1), F# after F(3), G# after G(4), A# after A(5)
@@ -183,7 +184,7 @@ function buildKeyboard() {
       const el = document.createElement("div");
       el.className = "key-black";
       el.dataset.midi = midi;
-      el.style.left = `${octaveStartX + bk.whitePos * WHITE_KEY_WIDTH - 15}px`;
+      el.style.left = `${octaveStartX + bk.whitePos * WHITE_KEY_WIDTH - WHITE_KEY_WIDTH * 0.3}px`;
       el.addEventListener("mousedown", (e) => { e.stopPropagation(); triggerNoteOn(midi, el); });
       el.addEventListener("mouseup",   (e) => { e.stopPropagation(); triggerNoteOff(midi, el); });
       el.addEventListener("mouseleave", () => { if (el.classList.contains("active")) triggerNoteOff(midi, el); });
@@ -191,6 +192,19 @@ function buildKeyboard() {
       noteToEl[midi] = el;
     }
   }
+}
+
+function updateKeyDimensions() {
+  const totalWhiteKeys = 15;
+  const w = keyboardContainer.clientWidth;
+  const h = keyboardContainer.clientHeight;
+  WHITE_KEY_WIDTH = w / totalWhiteKeys;
+  const keyH = Math.min(h * 0.95, WHITE_KEY_WIDTH * 3.6);
+  const root = document.documentElement;
+  root.style.setProperty("--key-w",  `${WHITE_KEY_WIDTH}px`);
+  root.style.setProperty("--key-h",  `${keyH}px`);
+  root.style.setProperty("--key-bw", `${WHITE_KEY_WIDTH * 0.6}px`);
+  root.style.setProperty("--key-bh", `${keyH * 0.61}px`);
 }
 
 function keyLabel(semitone, oct) {
@@ -382,6 +396,21 @@ sustainBtn.addEventListener("click", async () => {
   }
 });
 
+// ── Panel toggle & window close ───────────────────────────────────────────────
+const panelEl     = document.getElementById("panel");
+const panelToggle = document.getElementById("panel-toggle");
+
+panelToggle.addEventListener("click", () => {
+  const open = panelEl.classList.toggle("open");
+  panelToggle.classList.toggle("active", open);
+  // Give the panel time to expand, then recalculate key sizes
+  setTimeout(() => { updateKeyDimensions(); buildKeyboard(); }, 230);
+});
+
+document.getElementById("close-btn").addEventListener("click", () => {
+  getCurrentWindow().close();
+});
+
 // ── Status helper ─────────────────────────────────────────────────────────────
 function setStatus(msg, type = "") {
   statusEl.textContent = msg;
@@ -390,5 +419,12 @@ function setStatus(msg, type = "") {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 octaveDisplay.textContent = baseOctave;
+updateKeyDimensions();
 buildKeyboard();
 loadPorts();
+
+// Rescale keyboard whenever the window is resized
+new ResizeObserver(() => {
+  updateKeyDimensions();
+  buildKeyboard();
+}).observe(keyboardContainer);
