@@ -582,7 +582,7 @@ async function correctAspectRatio() {
   }
 }
 
-appWindow.onResized(() => correctAspectRatio());
+appWindow.onResized(() => { if (!isZooming) correctAspectRatio(); });
 
 // ── Window controls ───────────────────────────────────────────────────────────
 document.getElementById("close-btn").addEventListener("click", () => {
@@ -615,21 +615,32 @@ async function applyZoom() {
 
 // Apply saved zoom level on startup after window is ready
 window.addEventListener("load", () => {
+  // Measure app element at 1x scale to get true base dimensions
+  appEl.style.transform = "scale(1)";
+  baseWidth = appEl.offsetWidth;
+  baseHeight = appEl.offsetHeight;
   applyZoom();
 });
 
-window.addEventListener("keydown", (e) => {
-  if (!e.ctrlKey && !e.metaKey) return;
+// Zoom controls (in config modal)
+const zoomInBtn = document.getElementById("zoom-in");
+const zoomOutBtn = document.getElementById("zoom-out");
+const zoomDisplay = document.getElementById("zoom-display");
 
-  if (e.key === "/" || e.key === "+") {
-    e.preventDefault();
-    zoomLevel = Math.min(2, zoomLevel + 0.1);
-    applyZoom();
-  } else if (e.key === "-") {
-    e.preventDefault();
-    zoomLevel = Math.max(0.5, zoomLevel - 0.1);
-    applyZoom();
-  }
+function updateZoomDisplay() {
+  zoomDisplay.textContent = Math.round(zoomLevel * 100) + "%";
+}
+
+zoomInBtn.addEventListener("click", () => {
+  zoomLevel = Math.min(2, zoomLevel + 0.1);
+  applyZoom();
+  updateZoomDisplay();
+});
+
+zoomOutBtn.addEventListener("click", () => {
+  zoomLevel = Math.max(0.5, zoomLevel - 0.1);
+  applyZoom();
+  updateZoomDisplay();
 });
 
 // ── Help overlay ──────────────────────────────────────────────────────────────
@@ -664,6 +675,7 @@ function setStatus(msg, type = "") {
 // ── Init ──────────────────────────────────────────────────────────────────────
 octaveDisplay.textContent = baseOctave;
 appTitle.textContent = GM_PATCH_NAMES[patch];
+updateZoomDisplay();
 loadPorts();
 buildKeyboard();
 updateModWheel();

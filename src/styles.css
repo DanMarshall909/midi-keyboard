@@ -746,3 +746,24 @@ button:hover { background: rgba(255, 255, 255, 0.15); }
 #config-btn:hover {
   color: #aaa;
 }
+
+/* ── Zoom controls ── */
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#zoom-in, #zoom-out {
+  padding: 2px 6px;
+  font-size: 11px;
+  min-width: 32px;
+}
+
+#zoom-display {
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  color: #4da6ff;
+  min-width: 40px;
+  text-align: center;
+}
