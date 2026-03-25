@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 
 // ── Key → MIDI note mapping (GarageBand layout) ──────────────────────────────
 // Offsets are semitones relative to the base octave root (C).
@@ -12,7 +12,6 @@ const KEY_MAP = {
   // Upper octave (baseOctave + 1)
   q: 12, 2: 13, w: 14, 3: 15, e: 16,
   r: 17, 5: 18, t: 19, 6: 20, y: 21, 7: 22, u: 23,
-  i: 24, // C two octaves up
 };
 
 // ── General MIDI patch names (program 0–127) ──────────────────────────────────
@@ -145,7 +144,7 @@ function buildKeyboard() {
   keyboardEl.innerHTML = "";
 
   const totalOctaves = 2;
-  const totalWhiteKeys = totalOctaves * 7 + 1; // +1 for top C
+  const totalWhiteKeys = totalOctaves * 7; // exactly 2 octaves
   keyboardEl.style.width = `${totalWhiteKeys * WHITE_KEY_WIDTH}px`;
 
   // White keys
@@ -165,18 +164,6 @@ function buildKeyboard() {
       noteToEl[midi] = el;
     }
   }
-  // Top C
-  const topMidi = (baseOctave + 2) * 12 + 12;
-  const topEl = document.createElement("div");
-  topEl.className = "key-white";
-  topEl.dataset.midi = topMidi;
-  topEl.textContent = `C${baseOctave + 2}`;
-  topEl.addEventListener("mousedown", () => triggerNoteOn(topMidi, topEl));
-  topEl.addEventListener("mouseup",   () => triggerNoteOff(topMidi, topEl));
-  topEl.addEventListener("mouseleave", () => { if (topEl.classList.contains("active")) triggerNoteOff(topMidi, topEl); });
-  keyboardEl.appendChild(topEl);
-  noteToEl[topMidi] = topEl;
-
   // Black keys (absolute positioned over white keys)
   for (let oct = 0; oct < totalOctaves; oct++) {
     const octaveStartX = oct * 7 * WHITE_KEY_WIDTH;
@@ -196,7 +183,7 @@ function buildKeyboard() {
 }
 
 function updateKeyDimensions() {
-  const totalWhiteKeys = 15;
+  const totalWhiteKeys = 14; // 2 octaves × 7 white keys
   const ASPECT = 3.6; // key height = key width * ASPECT
   const w = keyboardContainer.clientWidth;
   const h = keyboardContainer.clientHeight;
@@ -400,6 +387,31 @@ sustainBtn.addEventListener("click", async () => {
   }
 });
 
+// ── Aspect-ratio enforcement ──────────────────────────────────────────────────
+const appWindow = getCurrentWindow();
+let aspectCorrecting = false;
+
+async function correctAspectRatio() {
+  if (aspectCorrecting) return;
+  aspectCorrecting = true;
+  try {
+    const size = await appWindow.innerSize();
+    const sf   = await appWindow.scaleFactor();
+    const logW = size.width / sf;
+    // overhead = everything above the keyboard container (titlebar, panel, padding)
+    const overhead = window.innerHeight - keyboardContainer.clientHeight;
+    const newLogH  = Math.round((logW / 15) * 3.6 + overhead);
+    if (Math.abs(newLogH - window.innerHeight) > 2) {
+      await appWindow.setSize(new LogicalSize(logW, newLogH));
+    }
+  } finally {
+    // Hold the flag long enough to swallow the setSize-triggered resize event
+    setTimeout(() => { aspectCorrecting = false; }, 150);
+  }
+}
+
+appWindow.onResized(() => correctAspectRatio());
+
 // ── Panel toggle & window close ───────────────────────────────────────────────
 const panelEl     = document.getElementById("panel");
 const panelToggle = document.getElementById("panel-toggle");
@@ -407,8 +419,8 @@ const panelToggle = document.getElementById("panel-toggle");
 panelToggle.addEventListener("click", () => {
   const open = panelEl.classList.toggle("open");
   panelToggle.classList.toggle("active", open);
-  // Give the panel time to expand, then recalculate key sizes
-  setTimeout(() => { updateKeyDimensions(); buildKeyboard(); }, 230);
+  // Give the panel time to expand, then recalculate key sizes and aspect ratio
+  setTimeout(() => { updateKeyDimensions(); buildKeyboard(); correctAspectRatio(); }, 230);
 });
 
 document.getElementById("close-btn").addEventListener("click", () => {
