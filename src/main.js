@@ -90,7 +90,7 @@ let connected    = false;
 let arrowCc      = 10;
 let arrowCcValue = 64;
 let modValue     = 0;
-const heldKeys = new Set();
+const heldKeys   = new Set();
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 const appTitle        = document.getElementById("app-title");
@@ -351,7 +351,6 @@ window.addEventListener("keydown", (e) => {
 
   if (e.key === " " && !e.repeat) {
     e.preventDefault();
-    sustainOn = true;
     if (connected) invoke("send_cc", { channel, cc: 64, value: 127 }).catch(() => {});
     return;
   }
@@ -384,7 +383,6 @@ window.addEventListener("keydown", (e) => {
 
 window.addEventListener("keyup", (e) => {
   if (e.key === " ") {
-    sustainOn = false;
     if (connected) invoke("send_cc", { channel, cc: 64, value: 0 }).catch(() => {});
     return;
   }
@@ -417,7 +415,6 @@ window.addEventListener("auxclick", (e) => {
 
 // Release all held notes on window blur
 window.addEventListener("blur", () => {
-  sustainOn = false;
   if (connected) {
     invoke("send_cc", { channel, cc: 64, value: 0 }).catch(() => {});
     modValue = 0;
@@ -524,9 +521,6 @@ patchSelect.addEventListener("change", async () => {
     setStatus(String(e), "error");
   }
 });
-
-// Sustain state (triggered by keyboard, no button)
-let sustainOn = false;
 
 // Arrow CC selector
 const ARROW_CC_OPTIONS = [
