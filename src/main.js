@@ -233,7 +233,7 @@ async function triggerNoteOff(midi, el) {
 
 // ── Mod wheel (centered, ±127 range) ──────────────────────────────────────────
 function updateModWheel() {
-  const trackH = modTrack.clientHeight;
+  const trackH = modTrack.clientHeight || 80;  // fallback to default height if layout not ready
   const gripH  = 18;
 
   // Center position for value 0
