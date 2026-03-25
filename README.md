@@ -1,18 +1,21 @@
 # MIDI Keyboard
 
+[![GitHub Release](https://img.shields.io/github/v/release/DanMarshall909/midi-keyboard)](https://github.com/DanMarshall909/midi-keyboard/releases/latest)
+
 A lightweight desktop app that turns your PC keyboard into a MIDI output device. Built with Tauri 2 + Rust + vanilla JS.
 
 ## Download
 
-Go to the [Releases](https://github.com/DanMarshall909/midi-keyboard/releases) page and download the installer for your platform:
-
-| Platform | File |
+| Platform | Download |
 | --- | --- |
-| Windows | `midi-keyboard_x64_en-US.msi` (recommended) or `midi-keyboard_x64-setup.exe` |
-| macOS (Apple Silicon) | `midi-keyboard_aarch64.dmg` |
-| macOS (Intel) | `midi-keyboard_x64.dmg` |
-| Linux (Debian/Ubuntu) | `midi-keyboard_amd64.deb` |
-| Linux (other) | `midi-keyboard_amd64.AppImage` |
+| Windows (MSI) | [midi-keyboard_x64_en-US.msi](https://github.com/DanMarshall909/midi-keyboard/releases/latest/download/midi-keyboard_0.1.0_x64_en-US.msi) |
+| Windows (EXE) | [midi-keyboard_x64-setup.exe](https://github.com/DanMarshall909/midi-keyboard/releases/latest/download/midi-keyboard_0.1.0_x64-setup.exe) |
+| macOS (Apple Silicon) | [midi-keyboard_aarch64.dmg](https://github.com/DanMarshall909/midi-keyboard/releases/latest/download/midi-keyboard_aarch64.dmg) |
+| macOS (Intel) | [midi-keyboard_x64.dmg](https://github.com/DanMarshall909/midi-keyboard/releases/latest/download/midi-keyboard_x64.dmg) |
+| Linux (Debian/Ubuntu) | [midi-keyboard_amd64.deb](https://github.com/DanMarshall909/midi-keyboard/releases/latest/download/midi-keyboard_amd64.deb) |
+| Linux (AppImage) | [midi-keyboard_amd64.AppImage](https://github.com/DanMarshall909/midi-keyboard/releases/latest/download/midi-keyboard_amd64.AppImage) |
+
+Or browse all releases on the [Releases page](https://github.com/DanMarshall909/midi-keyboard/releases).
 
 ### Platform notes
 
