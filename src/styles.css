@@ -296,8 +296,8 @@ button:hover { background: rgba(255, 255, 255, 0.15); }
 
 /* ── Rotary knob ── */
 .knob {
-  width: 16px;
-  height: 16px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow:
@@ -332,13 +332,13 @@ button:hover { background: rgba(255, 255, 255, 0.15); }
 .knob::after {
   content: '';
   position: absolute;
-  top: 2px;
+  top: 3px;
   left: 50%;
   transform: translateX(-50%);
-  width: 1.5px;
-  height: 4.5px;
+  width: 2.25px;
+  height: 6.75px;
   background: rgba(120, 200, 255, 0.95);
-  border-radius: 1px;
+  border-radius: 1.5px;
   z-index: 2;
 }
 
