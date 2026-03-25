@@ -605,8 +605,10 @@ async function applyZoom() {
   localStorage.setItem("zoomLevel", zoomLevel.toFixed(2));
 }
 
-// Apply saved zoom level on startup
-applyZoom();
+// Apply saved zoom level on startup after window is ready
+window.addEventListener("load", () => {
+  applyZoom();
+});
 
 window.addEventListener("keydown", (e) => {
   if (!e.ctrlKey && !e.metaKey) return;
