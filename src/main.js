@@ -627,6 +627,24 @@ zoomOutBtn.addEventListener("click", () => {
   updateZoomDisplay();
 });
 
+// ── Theme switcher ────────────────────────────────────────────────────────────
+const swatches = document.querySelectorAll(".theme-swatch");
+
+function applyTheme(name) {
+  if (name === "default") {
+    document.documentElement.removeAttribute("data-theme");
+  } else {
+    document.documentElement.setAttribute("data-theme", name);
+  }
+  swatches.forEach(s => s.classList.toggle("active", s.dataset.theme === name));
+  localStorage.setItem("theme", name);
+}
+
+swatches.forEach(s => s.addEventListener("click", () => applyTheme(s.dataset.theme)));
+
+// Apply saved theme on startup
+applyTheme(localStorage.getItem("theme") || "default");
+
 // ── Help overlay ──────────────────────────────────────────────────────────────
 const helpOverlay = document.getElementById("help-overlay");
 document.getElementById("help-btn").addEventListener("click", () => {
