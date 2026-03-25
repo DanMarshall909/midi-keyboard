@@ -197,11 +197,13 @@ function buildKeyboard() {
 
 function updateKeyDimensions() {
   const totalWhiteKeys = 15;
+  const ASPECT = 3.6; // key height = key width * ASPECT
   const w = keyboardContainer.clientWidth;
   const h = keyboardContainer.clientHeight;
   if (w < 10 || h < 10) return; // container not laid out yet — keep CSS defaults
-  WHITE_KEY_WIDTH = w / totalWhiteKeys;
-  const keyH = Math.min(h * 0.95, WHITE_KEY_WIDTH * 3.6);
+  // Scale to fit container while preserving aspect ratio (like object-fit: contain)
+  WHITE_KEY_WIDTH = Math.min(w / totalWhiteKeys, (h * 0.95) / ASPECT);
+  const keyH = WHITE_KEY_WIDTH * ASPECT;
   const root = document.documentElement;
   root.style.setProperty("--key-w",  `${WHITE_KEY_WIDTH}px`);
   root.style.setProperty("--key-h",  `${keyH}px`);
