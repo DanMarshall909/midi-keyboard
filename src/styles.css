@@ -93,7 +93,7 @@ body {
 .patch-channel-panel {
   flex-direction: row;
   gap: 4px;
-  align-items: flex-end;
+  align-items: center;
 }
 
 .ctrl-item {
