@@ -90,6 +90,12 @@ body {
   justify-content: center;
 }
 
+.patch-channel-panel {
+  flex-direction: row;
+  gap: 4px;
+  align-items: flex-end;
+}
+
 .ctrl-item {
   display: flex;
   flex-direction: column;
