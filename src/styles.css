@@ -420,7 +420,6 @@ button:hover { background: rgba(255, 255, 255, 0.15); }
   justify-content: center;
   align-items: center;
   overflow: hidden;
-  perspective: 600px;
   min-height: 0;
   height: 100%;
 }
@@ -429,8 +428,6 @@ button:hover { background: rgba(255, 255, 255, 0.15); }
   position: relative;
   height: var(--key-h);
   display: flex;
-  transform: rotateX(4deg);
-  transform-origin: top center;
   filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.6));
 }
 
