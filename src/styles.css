@@ -58,7 +58,7 @@ body {
 #control-bar {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 12px;
   padding: 6px 8px;
   background: rgba(8, 8, 20, 0.6);
