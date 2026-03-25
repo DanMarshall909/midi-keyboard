@@ -142,7 +142,7 @@ function buildKeyboard() {
       el.dataset.midi = midi;
       el.dataset.label = keyLabel(semitone, oct);
       el.textContent = el.dataset.label;
-      el.addEventListener("mousedown", () => triggerNoteOn(midi, el));
+      el.addEventListener("mousedown", (e) => { if (e.button === 0) triggerNoteOn(midi, el); });
       el.addEventListener("mouseup",   () => triggerNoteOff(midi, el));
       el.addEventListener("mouseleave", () => { if (el.classList.contains("active")) triggerNoteOff(midi, el); });
       keyboardEl.appendChild(el);
@@ -158,7 +158,7 @@ function buildKeyboard() {
       el.className = "key-black";
       el.dataset.midi = midi;
       el.style.left = `${octaveStartX + bk.whitePos * WHITE_KEY_WIDTH - WHITE_KEY_WIDTH * 0.3}px`;
-      el.addEventListener("mousedown", (e) => { e.stopPropagation(); triggerNoteOn(midi, el); });
+      el.addEventListener("mousedown", (e) => { if (e.button === 0) { e.stopPropagation(); triggerNoteOn(midi, el); } });
       el.addEventListener("mouseup",   (e) => { e.stopPropagation(); triggerNoteOff(midi, el); });
       el.addEventListener("mouseleave", () => { if (el.classList.contains("active")) triggerNoteOff(midi, el); });
       keyboardEl.appendChild(el);
@@ -408,6 +408,7 @@ window.addEventListener("wheel", (e) => {
 window.addEventListener("auxclick", (e) => {
   if (e.button !== 1) return;
   e.preventDefault();
+  e.stopPropagation();
   modValue = 0;
   updateModWheel();
   if (connected) invoke("send_cc", { channel, cc: 1, value: 64 }).catch(() => {});
