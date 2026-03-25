@@ -589,9 +589,24 @@ document.getElementById("close-btn").addEventListener("click", () => {
   getCurrentWindow().close();
 });
 
-document.getElementById("titlebar").addEventListener("mousedown", (e) => {
-  if (e.target.closest("button")) return;
-  getCurrentWindow().startDragging();
+// ── Zoom controls ─────────────────────────────────────────────────────────────
+let zoomLevel = 1;
+const appEl = document.getElementById("app");
+
+window.addEventListener("keydown", (e) => {
+  if (!e.ctrlKey && !e.metaKey) return;
+
+  if (e.key === "/" || e.key === "+") {
+    e.preventDefault();
+    zoomLevel = Math.min(2, zoomLevel + 0.1);
+    appEl.style.transform = `scale(${zoomLevel})`;
+    appEl.style.transformOrigin = "top center";
+  } else if (e.key === "-") {
+    e.preventDefault();
+    zoomLevel = Math.max(0.5, zoomLevel - 0.1);
+    appEl.style.transform = `scale(${zoomLevel})`;
+    appEl.style.transformOrigin = "top center";
+  }
 });
 
 // ── Help overlay ──────────────────────────────────────────────────────────────
