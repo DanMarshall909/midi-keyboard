@@ -26,6 +26,7 @@ body {
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.07);
   overflow: hidden;
+  position: relative;
 }
 
 /* ── Title bar ── */
@@ -91,21 +92,28 @@ button:hover { background: rgba(255, 255, 255, 0.15); }
 #close-btn { background: transparent; border-color: transparent; color: #555; }
 #close-btn:hover { background: rgba(244, 67, 54, 0.75); border-color: transparent; color: #fff; }
 
-/* ── Controls panel ── */
+/* ── Controls panel (floating overlay) ── */
 #panel {
-  overflow: hidden;
-  max-height: 0;
-  transition: max-height 220ms ease, padding 220ms ease, border-color 220ms ease;
-  background: rgba(10, 10, 22, 0.55);
-  border-bottom: 1px solid transparent;
-  padding: 0 12px;
-  flex-shrink: 0;
+  position: absolute;
+  top: 30px; /* flush under the title bar */
+  left: 0;
+  right: 0;
+  z-index: 20;
+  background: rgba(10, 10, 26, 0.96);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 10px 14px;
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+  transition: opacity 180ms ease, transform 180ms ease;
 }
 
 #panel.open {
-  max-height: 130px;
-  border-bottom-color: rgba(255, 255, 255, 0.05);
-  padding: 8px 12px;
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
 }
 
 #toolbar {

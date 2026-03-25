@@ -447,8 +447,6 @@ const panelToggle = document.getElementById("panel-toggle");
 panelToggle.addEventListener("click", () => {
   const open = panelEl.classList.toggle("open");
   panelToggle.classList.toggle("active", open);
-  // Give the panel time to expand, then recalculate key sizes and aspect ratio
-  setTimeout(() => { updateKeyDimensions(); buildKeyboard(); correctAspectRatio(); }, 230);
 });
 
 document.getElementById("close-btn").addEventListener("click", () => {
