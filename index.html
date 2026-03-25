@@ -8,57 +8,130 @@
   </head>
   <body>
     <div id="app">
-      <!-- Drag region / title bar -->
+      <!-- Title bar -->
       <div id="titlebar" data-tauri-drag-region>
-        <span id="app-title" data-tauri-drag-region>MIDI Keyboard</span>
+        <span id="app-title" data-tauri-drag-region>Acoustic Grand Piano</span>
         <div id="titlebar-btns">
-          <button id="panel-toggle" title="Toggle controls">⚙</button>
+          <button id="help-btn" title="Keyboard shortcuts">?</button>
           <button id="close-btn" title="Close">✕</button>
         </div>
       </div>
 
-      <!-- Collapsible controls panel -->
-      <div id="panel">
-        <div id="toolbar">
-          <div id="port-section">
-            <select id="port-select"><option value="">-- MIDI Output --</option></select>
+      <!-- Control bar (above keyboard) -->
+      <div id="control-bar">
+        <!-- Port & Status -->
+        <div class="ctrl-item">
+          <div class="ctrl-row">
+            <select id="port-select"><option value="">-- Port --</option></select>
             <button id="refresh-btn" title="Refresh ports">⟳</button>
           </div>
-          <label>
-            Oct
+          <div id="status"></div>
+        </div>
+
+        <!-- Octave -->
+        <div class="ctrl-item">
+          <div class="ctrl-label">Oct</div>
+          <div class="ctrl-row centered">
             <button id="oct-down">−</button>
             <span id="octave-display">4</span>
             <button id="oct-up">+</button>
-          </label>
-          <label>
-            Vel
-            <input id="velocity" type="range" min="1" max="127" value="100" />
-            <span id="velocity-display">100</span>
-          </label>
-          <label>Ch <select id="channel-select"></select></label>
-          <label>Patch <select id="patch-select"></select></label>
-          <div id="status"></div>
+          </div>
         </div>
-        <div id="cc-controls">
-          <label>Mod  <input class="cc-slider" type="range" min="0" max="127" value="0"   data-cc="1"  /><span class="cc-val">0</span></label>
-          <label>Pan  <input class="cc-slider" type="range" min="0" max="127" value="64"  data-cc="10" /><span class="cc-val">64</span></label>
-          <label>Expr <input class="cc-slider" type="range" min="0" max="127" value="127" data-cc="11" /><span class="cc-val">127</span></label>
-          <label>Rev  <input class="cc-slider" type="range" min="0" max="127" value="0"   data-cc="91" /><span class="cc-val">0</span></label>
-          <label>Cho  <input class="cc-slider" type="range" min="0" max="127" value="0"   data-cc="93" /><span class="cc-val">0</span></label>
+
+        <!-- Channel -->
+        <div class="ctrl-item">
+          <div class="ctrl-label">Ch</div>
+          <select id="channel-select"></select>
+        </div>
+
+        <!-- Patch -->
+        <div class="ctrl-item">
+          <div class="ctrl-label">Patch</div>
+          <select id="patch-select"></select>
+        </div>
+
+        <!-- Knobs -->
+        <div class="knob-cell">
+          <div class="ctrl-label">Vel</div>
+          <div class="knob" id="knob-vel" data-value="100" data-min="1" data-max="127"></div>
+          <div class="knob-val" id="knob-vel-val">100</div>
+        </div>
+        <div class="knob-cell">
+          <div class="ctrl-label">Pan</div>
+          <div class="knob" id="knob-pan" data-cc="10" data-value="64" data-min="0" data-max="127"></div>
+          <div class="knob-val" id="knob-pan-val">64</div>
+        </div>
+        <div class="knob-cell">
+          <div class="ctrl-label">Expr</div>
+          <div class="knob" id="knob-expr" data-cc="11" data-value="127" data-min="0" data-max="127"></div>
+          <div class="knob-val" id="knob-expr-val">127</div>
+        </div>
+        <div class="knob-cell">
+          <div class="ctrl-label">Rev</div>
+          <div class="knob" id="knob-rev" data-cc="91" data-value="0" data-min="0" data-max="127"></div>
+          <div class="knob-val" id="knob-rev-val">0</div>
+        </div>
+        <div class="knob-cell">
+          <div class="ctrl-label">Cho</div>
+          <div class="knob" id="knob-cho" data-cc="93" data-value="0" data-min="0" data-max="127"></div>
+          <div class="knob-val" id="knob-cho-val">0</div>
+        </div>
+
+        <!-- Sustain -->
+        <div class="ctrl-item sustain-item">
           <button id="sustain-btn">Sustain</button>
-          <label>↑↓ CC <select id="arrow-cc-select"></select></label>
+        </div>
+
+        <!-- Arrow CC -->
+        <div class="ctrl-item">
+          <div class="ctrl-label">↑↓ CC</div>
+          <select id="arrow-cc-select"></select>
         </div>
       </div>
 
-      <!-- Keyboard -->
-      <div id="keyboard-area">
-        <div id="keyboard-container">
-          <div id="keyboard"></div>
+      <!-- Main area: mod wheel + keyboard -->
+      <div id="main-area">
+        <!-- Mod wheel (left side) -->
+        <div class="mod-item">
+          <div class="ctrl-label">Mod</div>
+          <div id="mod-track">
+            <div id="mod-fill"></div>
+            <div id="mod-grip"></div>
+          </div>
+          <div class="knob-val" id="mod-val">0</div>
         </div>
-        <div id="hint">z s x d c v g b h n j m &nbsp;|&nbsp; q 2 w 3 e r 5 t 6 y 7 u</div>
+
+        <!-- Keyboard area -->
+        <div id="keyboard-area">
+          <div id="keyboard-container">
+            <div id="keyboard"></div>
+          </div>
+        </div>
       </div>
+
+      <!-- Help overlay -->
+      <div id="help-overlay" class="hidden">
+        <div id="help-box">
+          <div id="help-header">
+            <h3>Keyboard Shortcuts</h3>
+            <button id="help-close">✕</button>
+          </div>
+          <table id="help-table">
+            <tbody>
+              <tr><td class="hk">z s x d c &nbsp; v g b h n j m</td><td>Lower octave — C D E F G A B (s d g h j = sharps)</td></tr>
+              <tr><td class="hk">q 2 w 3 e &nbsp; r 5 t 6 y 7 u</td><td>Upper octave — C D E F G A B (2 3 5 6 7 = sharps)</td></tr>
+              <tr><td class="hk">Space (hold)</td><td>Sustain pedal (CC 64)</td></tr>
+              <tr><td class="hk">F1 – F9</td><td>Set octave 0 – 8</td></tr>
+              <tr><td class="hk">↑ &nbsp;/&nbsp; →</td><td>Step arrow CC up by 5</td></tr>
+              <tr><td class="hk">↓ &nbsp;/&nbsp; ←</td><td>Step arrow CC down by 5</td></tr>
+              <tr><td class="hk">Scroll wheel</td><td>Modulation (CC 1) ± 5</td></tr>
+              <tr><td class="hk">Middle click</td><td>Reset modulation to 0</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
-
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

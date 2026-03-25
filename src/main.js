@@ -2,9 +2,6 @@ import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 
 // ── Key → MIDI note mapping (GarageBand layout) ──────────────────────────────
-// Offsets are semitones relative to the base octave root (C).
-// Lower row  (z…): C D E F G A B  +  black keys on s d g h j
-// Upper row  (q…): C D E F G A B C  +  black keys on 2 3 5 6 7
 const KEY_MAP = {
   // Lower octave (baseOctave)
   z: 0,  s: 1,  x: 2,  d: 3,  c: 4,
@@ -16,123 +13,109 @@ const KEY_MAP = {
 
 // ── General MIDI patch names (program 0–127) ──────────────────────────────────
 const GM_PATCHES = [
-  // Piano
   ["Piano", [
     "Acoustic Grand Piano", "Bright Acoustic Piano", "Electric Grand Piano",
     "Honky-tonk Piano", "Electric Piano 1", "Electric Piano 2", "Harpsichord", "Clavi",
   ]],
-  // Chromatic Perc
   ["Chromatic Perc", [
     "Celesta", "Glockenspiel", "Music Box", "Vibraphone",
     "Marimba", "Xylophone", "Tubular Bells", "Dulcimer",
   ]],
-  // Organ
   ["Organ", [
     "Drawbar Organ", "Percussive Organ", "Rock Organ", "Church Organ",
     "Reed Organ", "Accordion", "Harmonica", "Tango Accordion",
   ]],
-  // Guitar
   ["Guitar", [
     "Nylon Guitar", "Steel Guitar", "Jazz Guitar", "Clean Guitar",
     "Muted Guitar", "Overdriven Guitar", "Distortion Guitar", "Guitar Harmonics",
   ]],
-  // Bass
   ["Bass", [
     "Acoustic Bass", "Finger Bass", "Pick Bass", "Fretless Bass",
     "Slap Bass 1", "Slap Bass 2", "Synth Bass 1", "Synth Bass 2",
   ]],
-  // Strings
   ["Strings", [
     "Violin", "Viola", "Cello", "Contrabass",
     "Tremolo Strings", "Pizzicato Strings", "Orchestral Harp", "Timpani",
   ]],
-  // Ensemble
   ["Ensemble", [
     "String Ensemble 1", "String Ensemble 2", "Synth Strings 1", "Synth Strings 2",
     "Choir Aahs", "Voice Oohs", "Synth Voice", "Orchestra Hit",
   ]],
-  // Brass
   ["Brass", [
     "Trumpet", "Trombone", "Tuba", "Muted Trumpet",
     "French Horn", "Brass Section", "Synth Brass 1", "Synth Brass 2",
   ]],
-  // Reed
   ["Reed", [
     "Soprano Sax", "Alto Sax", "Tenor Sax", "Baritone Sax",
     "Oboe", "English Horn", "Bassoon", "Clarinet",
   ]],
-  // Pipe
   ["Pipe", [
     "Piccolo", "Flute", "Recorder", "Pan Flute",
     "Blown Bottle", "Shakuhachi", "Whistle", "Ocarina",
   ]],
-  // Synth Lead
   ["Synth Lead", [
     "Square Lead", "Sawtooth Lead", "Calliope Lead", "Chiff Lead",
     "Charang Lead", "Voice Lead", "Fifths Lead", "Bass+Lead",
   ]],
-  // Synth Pad
   ["Synth Pad", [
     "New Age Pad", "Warm Pad", "Polysynth Pad", "Choir Pad",
     "Bowed Pad", "Metallic Pad", "Halo Pad", "Sweep Pad",
   ]],
-  // Synth FX
   ["Synth FX", [
     "Rain FX", "Soundtrack FX", "Crystal FX", "Atmosphere FX",
     "Brightness FX", "Goblins FX", "Echoes FX", "Sci-fi FX",
   ]],
-  // Ethnic
   ["Ethnic", [
     "Sitar", "Banjo", "Shamisen", "Koto",
     "Kalimba", "Bag Pipe", "Fiddle", "Shanai",
   ]],
-  // Percussive
   ["Percussive", [
     "Tinkle Bell", "Agogo", "Steel Drums", "Woodblock",
     "Taiko Drum", "Melodic Tom", "Synth Drum", "Reverse Cymbal",
   ]],
-  // Sound FX
   ["Sound FX", [
     "Guitar Fret Noise", "Breath Noise", "Seashore", "Bird Tweet",
     "Telephone Ring", "Helicopter", "Applause", "Gunshot",
   ]],
 ];
 
+const GM_PATCH_NAMES = GM_PATCHES.flatMap(([, names]) => names);
+
 // ── State ─────────────────────────────────────────────────────────────────────
-let baseOctave   = 4;   // C4 = MIDI 60
+let baseOctave   = 4;
 let velocity     = 100;
-let channel      = 0;   // 0-indexed (sent as channel 0 = MIDI ch 1)
-let patch        = 0;   // GM program number 0–127
+let channel      = 0;
+let patch        = 0;
 let connected    = false;
-let arrowCc      = 10;  // CC number controlled by arrow keys (default: Pan)
-let arrowCcValue = 64;  // current value — 64 = centre for Pan
-let modValue     = 0;   // CC 1 (modulation), controlled by mouse wheel
-const heldKeys = new Set(); // prevent key-repeat retriggering
+let arrowCc      = 10;
+let arrowCcValue = 64;
+let modValue     = 0;
+const heldKeys = new Set();
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
+const appTitle        = document.getElementById("app-title");
 const portSelect      = document.getElementById("port-select");
 const refreshBtn      = document.getElementById("refresh-btn");
 const octaveDisplay   = document.getElementById("octave-display");
 const octDownBtn      = document.getElementById("oct-down");
 const octUpBtn        = document.getElementById("oct-up");
-const velocitySlider  = document.getElementById("velocity");
-const velocityDisplay = document.getElementById("velocity-display");
 const channelSelect   = document.getElementById("channel-select");
 const patchSelect     = document.getElementById("patch-select");
-const statusEl           = document.getElementById("status");
-const arrowCcSelect      = document.getElementById("arrow-cc-select");
-const keyboardEl         = document.getElementById("keyboard");
-const keyboardContainer  = document.getElementById("keyboard-container");
+const statusEl        = document.getElementById("status");
+const arrowCcSelect   = document.getElementById("arrow-cc-select");
+const keyboardEl      = document.getElementById("keyboard");
+const keyboardContainer = document.getElementById("keyboard-container");
+const sidebarEl       = document.getElementById("sidebar");
+const modTrack        = document.getElementById("mod-track");
+const modFill         = document.getElementById("mod-fill");
+const modGrip         = document.getElementById("mod-grip");
+const modValEl        = document.getElementById("mod-val");
+const sustainBtn      = document.getElementById("sustain-btn");
 
 // ── Piano layout ──────────────────────────────────────────────────────────────
-// 25 keys: C4..C6 (2 full octaves + top C)
-// White key indices within an octave: 0 2 4 5 7 9 11
-// Black key semitones within an octave: 1 3 6 8 10
 const WHITE_OFFSETS = [0, 2, 4, 5, 7, 9, 11];
-let WHITE_KEY_WIDTH = 50; // updated dynamically on resize
+let WHITE_KEY_WIDTH = 50;
 
-// Black key positions (left offset from start of octave in white-key units)
-// C# after C(0), D# after D(1), F# after F(3), G# after G(4), A# after A(5)
 const BLACK_KEYS = [
   { semitone: 1,  whitePos: 0.6 },
   { semitone: 3,  whitePos: 1.6 },
@@ -141,17 +124,15 @@ const BLACK_KEYS = [
   { semitone: 10, whitePos: 5.6 },
 ];
 
-// Build a reverse map: midiNote → DOM element
 const noteToEl = {};
 
 function buildKeyboard() {
   keyboardEl.innerHTML = "";
 
   const totalOctaves = 2;
-  const totalWhiteKeys = totalOctaves * 7; // exactly 2 octaves
+  const totalWhiteKeys = totalOctaves * 7;
   keyboardEl.style.width = `${totalWhiteKeys * WHITE_KEY_WIDTH}px`;
 
-  // White keys
   for (let oct = 0; oct < totalOctaves; oct++) {
     for (let i = 0; i < WHITE_OFFSETS.length; i++) {
       const semitone = oct * 12 + WHITE_OFFSETS[i];
@@ -168,7 +149,7 @@ function buildKeyboard() {
       noteToEl[midi] = el;
     }
   }
-  // Black keys (absolute positioned over white keys)
+
   for (let oct = 0; oct < totalOctaves; oct++) {
     const octaveStartX = oct * 7 * WHITE_KEY_WIDTH;
     for (const bk of BLACK_KEYS) {
@@ -187,12 +168,11 @@ function buildKeyboard() {
 }
 
 function updateKeyDimensions() {
-  const totalWhiteKeys = 14; // 2 octaves × 7 white keys
-  const ASPECT = 3.6; // key height = key width * ASPECT
+  const totalWhiteKeys = 14;
+  const ASPECT = 3.6;
   const w = keyboardContainer.clientWidth;
   const h = keyboardContainer.clientHeight;
-  if (w < 10 || h < 10) return; // container not laid out yet — keep CSS defaults
-  // Scale to fit container while preserving aspect ratio (like object-fit: contain)
+  if (w < 10 || h < 10) return;
   WHITE_KEY_WIDTH = Math.min(w / totalWhiteKeys, (h * 0.95) / ASPECT);
   const keyH = WHITE_KEY_WIDTH * ASPECT;
   const root = document.documentElement;
@@ -209,15 +189,6 @@ function keyLabel(semitone, oct) {
 }
 
 // ── MIDI helpers ──────────────────────────────────────────────────────────────
-function midiFromKey(key) {
-  const offset = KEY_MAP[key];
-  if (offset === undefined) return null;
-  // Upper row keys get baseOctave+1, lower row keys get baseOctave
-  const octaveShift = offset >= 12 ? 1 : 0;
-  return (baseOctave + octaveShift) * 12 + 12 + (offset % 12) + (offset >= 12 ? 0 : 0);
-  // Simplified: offset already encodes octave difference
-}
-
 function midiNoteFromKey(key) {
   const offset = KEY_MAP[key];
   if (offset === undefined) return null;
@@ -244,11 +215,102 @@ async function triggerNoteOff(midi, el) {
   }
 }
 
+// ── Mod wheel ─────────────────────────────────────────────────────────────────
+function updateModWheel() {
+  const t = modValue / 127;
+  modFill.style.height = `${t * 100}%`;
+  const trackH = modTrack.clientHeight || 80;
+  const gripH  = 18; // matches CSS height
+  modGrip.style.bottom = `${t * (trackH - gripH)}px`;
+  modValEl.textContent = modValue;
+}
+
+modTrack.addEventListener("mousedown", (e) => {
+  e.preventDefault();
+  const startY   = e.clientY;
+  const startVal = modValue;
+  const trackH   = modTrack.clientHeight;
+
+  function onMove(ev) {
+    const dy = startY - ev.clientY; // drag up = positive
+    modValue = Math.max(0, Math.min(127, Math.round(startVal + dy * 127 / trackH)));
+    updateModWheel();
+    if (connected) invoke("send_cc", { channel, cc: 1, value: modValue }).catch(() => {});
+  }
+  function onUp() {
+    document.removeEventListener("mousemove", onMove);
+    document.removeEventListener("mouseup",   onUp);
+  }
+  document.addEventListener("mousemove", onMove);
+  document.addEventListener("mouseup",   onUp);
+});
+
+// ── Rotary knob system ────────────────────────────────────────────────────────
+function knobRotation(value, min, max) {
+  return -135 + ((value - min) / (max - min)) * 270;
+}
+
+function initKnob(knobEl) {
+  const val = parseInt(knobEl.dataset.value);
+  const min = parseInt(knobEl.dataset.min);
+  const max = parseInt(knobEl.dataset.max);
+  knobEl.style.setProperty("--knob-rot", `${knobRotation(val, min, max)}deg`);
+}
+
+function makeKnobDraggable(knobEl, valEl, onChange) {
+  const min = parseInt(knobEl.dataset.min);
+  const max = parseInt(knobEl.dataset.max);
+
+  knobEl.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    const startY   = e.clientY;
+    const startVal = parseInt(knobEl.dataset.value);
+
+    function onMove(ev) {
+      const dy = startY - ev.clientY; // drag up = increase
+      const newVal = Math.max(min, Math.min(max, Math.round(startVal + dy * (max - min) / 100)));
+      if (newVal === parseInt(knobEl.dataset.value)) return;
+      knobEl.dataset.value = newVal;
+      knobEl.style.setProperty("--knob-rot", `${knobRotation(newVal, min, max)}deg`);
+      valEl.textContent = newVal;
+      onChange(newVal);
+    }
+    function onUp() {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup",   onUp);
+    }
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup",   onUp);
+  });
+}
+
+// Init velocity knob
+const knobVel    = document.getElementById("knob-vel");
+const knobVelVal = document.getElementById("knob-vel-val");
+initKnob(knobVel);
+makeKnobDraggable(knobVel, knobVelVal, (v) => { velocity = v; });
+
+// Init CC knobs
+const CC_KNOBS = [
+  ["knob-pan",  "knob-pan-val"],
+  ["knob-expr", "knob-expr-val"],
+  ["knob-rev",  "knob-rev-val"],
+  ["knob-cho",  "knob-cho-val"],
+];
+for (const [id, valId] of CC_KNOBS) {
+  const el    = document.getElementById(id);
+  const valEl = document.getElementById(valId);
+  const cc    = parseInt(el.dataset.cc);
+  initKnob(el);
+  makeKnobDraggable(el, valEl, (v) => {
+    if (connected) invoke("send_cc", { channel, cc, value: v }).catch(() => {});
+  });
+}
+
 // ── Keyboard events ───────────────────────────────────────────────────────────
 window.addEventListener("keydown", (e) => {
   if (e.ctrlKey || e.metaKey || e.altKey) return;
 
-  // Space = momentary sustain pedal
   if (e.key === " " && !e.repeat) {
     e.preventDefault();
     sustainBtn.classList.add("active");
@@ -256,7 +318,6 @@ window.addEventListener("keydown", (e) => {
     return;
   }
 
-  // F1–F9 = select octave 0–8
   if (/^F[1-9]$/.test(e.key) && !e.repeat) {
     e.preventDefault();
     baseOctave = parseInt(e.key.slice(1)) - 1;
@@ -265,7 +326,6 @@ window.addEventListener("keydown", (e) => {
     return;
   }
 
-  // Arrow keys = step the configurable arrow CC (repeats while held)
   if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
     e.preventDefault();
     const delta = (e.key === "ArrowUp" || e.key === "ArrowRight") ? 5 : -5;
@@ -274,7 +334,6 @@ window.addEventListener("keydown", (e) => {
     return;
   }
 
-  // Piano keys (no repeat)
   if (e.repeat) return;
   const key = e.key.toLowerCase();
   if (heldKeys.has(key)) return;
@@ -286,13 +345,11 @@ window.addEventListener("keydown", (e) => {
 });
 
 window.addEventListener("keyup", (e) => {
-  // Space = release sustain
   if (e.key === " ") {
     sustainBtn.classList.remove("active");
     if (connected) invoke("send_cc", { channel, cc: 64, value: 0 }).catch(() => {});
     return;
   }
-
   const key = e.key.toLowerCase();
   heldKeys.delete(key);
   const midi = midiNoteFromKey(key);
@@ -301,26 +358,30 @@ window.addEventListener("keyup", (e) => {
   triggerNoteOff(midi, noteToEl[midi]);
 });
 
-// Mouse wheel = modulation (CC 1); right-click resets to 0
+// Mouse wheel = modulation (CC 1)
 window.addEventListener("wheel", (e) => {
   e.preventDefault();
   modValue = Math.max(0, Math.min(127, modValue - Math.sign(e.deltaY) * 5));
+  updateModWheel();
   if (connected) invoke("send_cc", { channel, cc: 1, value: modValue }).catch(() => {});
 }, { passive: false });
 
+// Middle click = reset modulation
 window.addEventListener("auxclick", (e) => {
-  if (e.button !== 1) return; // middle click
+  if (e.button !== 1) return;
   e.preventDefault();
   modValue = 0;
+  updateModWheel();
   if (connected) invoke("send_cc", { channel, cc: 1, value: 0 }).catch(() => {});
 });
 
-// Release all held notes when window loses focus
+// Release all held notes on window blur
 window.addEventListener("blur", () => {
   sustainBtn.classList.remove("active");
   if (connected) {
     invoke("send_cc", { channel, cc: 64, value: 0 }).catch(() => {});
     modValue = 0;
+    updateModWheel();
     invoke("send_cc", { channel, cc: 1, value: 0 }).catch(() => {});
   }
   for (const key of heldKeys) {
@@ -334,17 +395,16 @@ window.addEventListener("blur", () => {
 async function loadPorts() {
   try {
     const ports = await invoke("get_midi_ports");
-    portSelect.innerHTML = '<option value="">-- Select MIDI Output --</option>';
+    portSelect.innerHTML = '<option value="">-- Port --</option>';
     ports.forEach((name, i) => {
       const opt = document.createElement("option");
       opt.value = i;
       opt.textContent = name;
       portSelect.appendChild(opt);
     });
-    if (ports.length === 0) { setStatus("No MIDI outputs found", "error"); return; }
-    setStatus(`${ports.length} port(s) found`);
+    if (ports.length === 0) { setStatus("No MIDI outputs", "error"); return; }
+    setStatus(`${ports.length} port(s)`);
 
-    // Auto-connect the last used port if it's still present
     const lastPort = localStorage.getItem("lastMidiPort");
     if (lastPort) {
       const idx = ports.indexOf(lastPort);
@@ -369,7 +429,7 @@ portSelect.addEventListener("change", async () => {
   try {
     const name = await invoke("connect_port", { portIndex: parseInt(idx) });
     connected = true;
-    setStatus(`Connected: ${name}`, "connected");
+    setStatus(`✓ ${name}`, "connected");
     localStorage.setItem("lastMidiPort", name);
     await invoke("program_change", { channel, program: patch });
   } catch (e) {
@@ -388,12 +448,7 @@ octUpBtn.addEventListener("click", () => {
   if (baseOctave < 8) { baseOctave++; octaveDisplay.textContent = baseOctave; buildKeyboard(); }
 });
 
-velocitySlider.addEventListener("input", () => {
-  velocity = parseInt(velocitySlider.value);
-  velocityDisplay.textContent = velocity;
-});
-
-// Populate channel selector
+// Channel selector
 for (let i = 1; i <= 16; i++) {
   const opt = document.createElement("option");
   opt.value = i - 1;
@@ -404,7 +459,7 @@ channelSelect.addEventListener("change", () => {
   channel = parseInt(channelSelect.value);
 });
 
-// Populate patch selector with GM optgroups
+// Patch selector
 let programNumber = 0;
 for (const [groupName, patches] of GM_PATCHES) {
   const group = document.createElement("optgroup");
@@ -421,6 +476,7 @@ for (const [groupName, patches] of GM_PATCHES) {
 
 patchSelect.addEventListener("change", async () => {
   patch = parseInt(patchSelect.value);
+  appTitle.textContent = GM_PATCH_NAMES[patch];
   if (!connected) return;
   try {
     await invoke("program_change", { channel, program: patch });
@@ -429,26 +485,10 @@ patchSelect.addEventListener("change", async () => {
   }
 });
 
-// ── CC controls ───────────────────────────────────────────────────────────────
-for (const slider of document.querySelectorAll(".cc-slider")) {
-  const valDisplay = slider.nextElementSibling;
-  slider.addEventListener("input", async () => {
-    const value = parseInt(slider.value);
-    valDisplay.textContent = value;
-    if (!connected) return;
-    try {
-      await invoke("send_cc", { channel, cc: parseInt(slider.dataset.cc), value });
-    } catch (e) {
-      setStatus(String(e), "error");
-    }
-  });
-}
-
-const sustainBtn = document.getElementById("sustain-btn");
+// Sustain toggle button
 let sustainOn = false;
 sustainBtn.addEventListener("click", async () => {
   sustainOn = !sustainOn;
-  sustainBtn.dataset.active = sustainOn;
   sustainBtn.classList.toggle("active", sustainOn);
   if (!connected) return;
   try {
@@ -458,11 +498,11 @@ sustainBtn.addEventListener("click", async () => {
   }
 });
 
-// Arrow-CC selector: common CCs + "Other" text input
+// Arrow CC selector
 const ARROW_CC_OPTIONS = [
-  [1, "1 – Mod Wheel"], [7, "7 – Volume"], [10, "10 – Pan"],
-  [11, "11 – Expression"], [64, "64 – Sustain"], [71, "71 – Resonance"],
-  [74, "74 – Brightness"], [91, "91 – Reverb"], [93, "93 – Chorus"],
+  [1,  "1 – Mod Wheel"],  [7,  "7 – Volume"],    [10, "10 – Pan"],
+  [11, "11 – Expression"],[64, "64 – Sustain"],   [71, "71 – Resonance"],
+  [74, "74 – Brightness"],[91, "91 – Reverb"],    [93, "93 – Chorus"],
 ];
 for (const [num, label] of ARROW_CC_OPTIONS) {
   const opt = document.createElement("option");
@@ -473,7 +513,6 @@ for (const [num, label] of ARROW_CC_OPTIONS) {
 arrowCcSelect.value = String(arrowCc);
 arrowCcSelect.addEventListener("change", () => {
   arrowCc = parseInt(arrowCcSelect.value);
-  // Pan centres at 64; everything else starts at 0
   arrowCcValue = arrowCc === 10 ? 64 : 0;
 });
 
@@ -487,10 +526,11 @@ async function correctAspectRatio() {
   if (aspectCorrecting) return;
   aspectCorrecting = true;
   try {
-    const size = await appWindow.innerSize();
-    const sf   = await appWindow.scaleFactor();
-    const logW = size.width / sf;
-    const logH = size.height / sf;
+    const size    = await appWindow.innerSize();
+    const sf      = await appWindow.scaleFactor();
+    const logW    = size.width  / sf;
+    const logH    = size.height / sf;
+    const sidebarW = sidebarEl.offsetWidth;
     const overhead = window.innerHeight - keyboardContainer.clientHeight;
     const dW = Math.abs(logW - prevLogW);
     const dH = Math.abs(logH - prevLogH);
@@ -499,11 +539,13 @@ async function correctAspectRatio() {
     if (dW >= dH) {
       // User dragged horizontally — correct height
       newW = logW;
-      newH = Math.round(logW / 14 * 3.6 + overhead);
+      const kbW = logW - sidebarW;
+      newH = Math.round(kbW / 14 * 3.6 + overhead);
     } else {
       // User dragged vertically — correct width
       newH = logH;
-      newW = Math.round((logH - overhead) / 3.6 * 14);
+      const kbH = logH - overhead;
+      newW = Math.round(kbH / 3.6 * 14 + sidebarW);
     }
 
     prevLogW = newW;
@@ -519,23 +561,26 @@ async function correctAspectRatio() {
 
 appWindow.onResized(() => correctAspectRatio());
 
-// ── Panel toggle & window close ───────────────────────────────────────────────
-const panelEl     = document.getElementById("panel");
-const panelToggle = document.getElementById("panel-toggle");
-
-panelToggle.addEventListener("click", () => {
-  const open = panelEl.classList.toggle("open");
-  panelToggle.classList.toggle("active", open);
-});
-
+// ── Window controls ───────────────────────────────────────────────────────────
 document.getElementById("close-btn").addEventListener("click", () => {
   getCurrentWindow().close();
 });
 
-// Manual drag — data-tauri-drag-region alone isn't reliable without decorations
 document.getElementById("titlebar").addEventListener("mousedown", (e) => {
   if (e.target.closest("button")) return;
   getCurrentWindow().startDragging();
+});
+
+// ── Help overlay ──────────────────────────────────────────────────────────────
+const helpOverlay = document.getElementById("help-overlay");
+document.getElementById("help-btn").addEventListener("click", () => {
+  helpOverlay.classList.toggle("hidden");
+});
+document.getElementById("help-close").addEventListener("click", () => {
+  helpOverlay.classList.add("hidden");
+});
+helpOverlay.addEventListener("click", (e) => {
+  if (e.target === helpOverlay) helpOverlay.classList.add("hidden");
 });
 
 // ── Status helper ─────────────────────────────────────────────────────────────
@@ -546,13 +591,13 @@ function setStatus(msg, type = "") {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 octaveDisplay.textContent = baseOctave;
+appTitle.textContent = GM_PATCH_NAMES[patch];
 loadPorts();
-
-// Build immediately with CSS defaults so keys are always visible,
-// then let ResizeObserver scale to fit the actual container size.
 buildKeyboard();
+updateModWheel();
+
 appWindow.innerSize().then(s => appWindow.scaleFactor().then(sf => {
-  prevLogW = s.width / sf;
+  prevLogW = s.width  / sf;
   prevLogH = s.height / sf;
 }));
 
