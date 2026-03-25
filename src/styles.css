@@ -307,6 +307,7 @@ button:hover { background: rgba(255, 255, 255, 0.15); }
   position: relative;
   transition: box-shadow 80ms;
   background: transparent;
+  transform: rotate(var(--knob-rot, -135deg));
 }
 
 .knob:hover {
@@ -316,7 +317,7 @@ button:hover { background: rgba(255, 255, 255, 0.15); }
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
-/* Fixed 3D highlight (does not rotate) */
+/* Fixed 3D highlight (counter-rotate to stay in place) */
 .knob::before {
   content: '';
   position: absolute;
@@ -324,15 +325,16 @@ button:hover { background: rgba(255, 255, 255, 0.15); }
   border-radius: 50%;
   background: radial-gradient(circle at 38% 35%, #4a4a4a, #1a1a1a 70%);
   pointer-events: none;
+  transform: rotate(calc(var(--knob-rot, -135deg) * -1));
 }
 
-/* Rotating indicator dot */
+/* Rotating indicator dot (orbits with knob rotation) */
 .knob::after {
   content: '';
   position: absolute;
   top: 4px;
   left: 50%;
-  transform: translateX(-50%) rotate(var(--knob-rot, -135deg));
+  transform: translateX(-50%);
   width: 3px;
   height: 9px;
   background: rgba(120, 200, 255, 0.95);
