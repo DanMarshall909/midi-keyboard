@@ -591,12 +591,17 @@ document.getElementById("close-btn").addEventListener("click", () => {
 
 // ── Zoom controls ─────────────────────────────────────────────────────────────
 let zoomLevel = 1;
+let baseWidth = 860;
+let baseHeight = 290;
 
 const appEl = document.getElementById("app");
 
 async function applyZoom() {
   appEl.style.transform = `scale(${zoomLevel})`;
   appEl.style.transformOrigin = "top center";
+  const newWidth = Math.round(baseWidth * zoomLevel);
+  const newHeight = Math.round(baseHeight * zoomLevel);
+  await appWindow.setSize(new LogicalSize(newWidth, newHeight));
 }
 
 window.addEventListener("keydown", (e) => {
