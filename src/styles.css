@@ -57,7 +57,7 @@ body {
 /* ── Control bar (horizontal, above keyboard) ── */
 #control-bar {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 12px;
   padding: 6px 8px;
   background: rgba(8, 8, 20, 0.6);
