@@ -106,6 +106,7 @@ let patch        = 0;   // GM program number 0–127
 let connected    = false;
 let arrowCc      = 10;  // CC number controlled by arrow keys (default: Pan)
 let arrowCcValue = 64;  // current value — 64 = centre for Pan
+let modValue     = 0;   // CC 1 (modulation), controlled by mouse wheel
 const heldKeys = new Set(); // prevent key-repeat retriggering
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
@@ -300,10 +301,21 @@ window.addEventListener("keyup", (e) => {
   triggerNoteOff(midi, noteToEl[midi]);
 });
 
+// Mouse wheel = modulation (CC 1)
+window.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  modValue = Math.max(0, Math.min(127, modValue - Math.sign(e.deltaY) * 5));
+  if (connected) invoke("send_cc", { channel, cc: 1, value: modValue }).catch(() => {});
+}, { passive: false });
+
 // Release all held notes when window loses focus
 window.addEventListener("blur", () => {
   sustainBtn.classList.remove("active");
-  if (connected) invoke("send_cc", { channel, cc: 64, value: 0 }).catch(() => {});
+  if (connected) {
+    invoke("send_cc", { channel, cc: 64, value: 0 }).catch(() => {});
+    modValue = 0;
+    invoke("send_cc", { channel, cc: 1, value: 0 }).catch(() => {});
+  }
   for (const key of heldKeys) {
     const midi = midiNoteFromKey(key);
     if (midi !== null) triggerNoteOff(midi, noteToEl[midi]);
