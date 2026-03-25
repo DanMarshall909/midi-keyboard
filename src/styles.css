@@ -320,7 +320,7 @@ button:hover { background: rgba(255, 255, 255, 0.15); }
   position: absolute;
   top: 4px;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) rotate(calc(var(--knob-rot, -135deg) * -1));
   width: 3px;
   height: 9px;
   background: rgba(120, 200, 255, 0.95);
