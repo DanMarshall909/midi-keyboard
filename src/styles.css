@@ -89,7 +89,7 @@ body {
   gap: 6px;
   justify-content: center;
   align-items: center;
-  margin-left: auto;
+  margin: 0 auto 0 auto;
 }
 
 .patch-channel-panel {
