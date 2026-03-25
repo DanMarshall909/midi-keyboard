@@ -105,7 +105,8 @@ const statusEl        = document.getElementById("status");
 const arrowCcSelect   = document.getElementById("arrow-cc-select");
 const keyboardEl      = document.getElementById("keyboard");
 const keyboardContainer = document.getElementById("keyboard-container");
-const sidebarEl       = document.getElementById("sidebar");
+const titlebar        = document.getElementById("titlebar");
+const controlBar      = document.getElementById("control-bar");
 const modTrack        = document.getElementById("mod-track");
 const modFill         = document.getElementById("mod-fill");
 const modGrip         = document.getElementById("mod-grip");
@@ -559,8 +560,7 @@ async function correctAspectRatio() {
     const sf      = await appWindow.scaleFactor();
     const logW    = size.width  / sf;
     const logH    = size.height / sf;
-    const sidebarW = sidebarEl.offsetWidth;
-    const overhead = window.innerHeight - keyboardContainer.clientHeight;
+    const overhead = titlebar.offsetHeight + controlBar.offsetHeight;
     const dW = Math.abs(logW - prevLogW);
     const dH = Math.abs(logH - prevLogH);
 
@@ -568,13 +568,13 @@ async function correctAspectRatio() {
     if (dW >= dH) {
       // User dragged horizontally — correct height
       newW = logW;
-      const kbW = logW - sidebarW;
-      newH = Math.round(kbW / 14 * 3.6 + overhead);
+      const kbH = logW / 14 * 3.6;
+      newH = Math.round(kbH + overhead);
     } else {
       // User dragged vertically — correct width
       newH = logH;
       const kbH = logH - overhead;
-      newW = Math.round(kbH / 3.6 * 14 + sidebarW);
+      newW = Math.round(kbH / 3.6 * 14);
     }
 
     prevLogW = newW;
