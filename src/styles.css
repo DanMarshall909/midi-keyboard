@@ -89,13 +89,16 @@ body {
   gap: 6px;
   justify-content: center;
   align-items: center;
+  margin: 0 auto;
 }
 
 .patch-channel-panel {
   flex-direction: row;
   gap: 4px;
   align-items: center;
-  min-height: 50px;
+  height: 50px;
+  margin-left: auto;
+  margin-right: 0;
 }
 
 .ctrl-item {
@@ -126,7 +129,7 @@ body {
   min-height: 0;
   gap: 4px;
   padding: 0 6px 6px 6px;
-  align-items: center;
+  align-items: flex-start;
 }
 
 .ctrl-group {
@@ -167,6 +170,23 @@ select {
 #control-bar select {
   width: auto;
   min-width: 50px;
+}
+
+#patch-select,
+#channel-select {
+  font-family: "Courier New", monospace;
+  color: #4da6ff;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.15) 0px,
+      rgba(0, 0, 0, 0.15) 1px,
+      transparent 1px,
+      transparent 2px
+    ),
+    linear-gradient(135deg, rgba(10, 40, 80, 0.4) 0%, rgba(0, 20, 60, 0.6) 100%),
+    rgba(5, 15, 35, 0.9);
+  border: 1px solid rgba(77, 166, 255, 0.3);
 }
 
 button {
@@ -217,12 +237,19 @@ button:hover { background: rgba(255, 255, 255, 0.15); }
 
 #octave-display {
   font-family: "Courier New", monospace;
-  font-size: 16px;
+  font-size: 13px;
   font-weight: bold;
   letter-spacing: 2px;
   color: #4da6ff;
   text-shadow: 0 0 1px rgba(77, 166, 255, 0.4);
   background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.15) 0px,
+      rgba(0, 0, 0, 0.15) 1px,
+      transparent 1px,
+      transparent 2px
+    ),
     linear-gradient(135deg, rgba(10, 40, 80, 0.4) 0%, rgba(0, 20, 60, 0.6) 100%),
     rgba(5, 15, 35, 0.9);
   border: 1px solid rgba(77, 166, 255, 0.2);
@@ -251,6 +278,7 @@ button:hover { background: rgba(255, 255, 255, 0.15); }
 .octave-panel {
   flex-direction: column;
   gap: 4px;
+  height: 50px;
 }
 
 .octave-row {
@@ -418,15 +446,18 @@ button:hover { background: rgba(255, 255, 255, 0.15); }
   flex: 1;
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: stretch;
   overflow: hidden;
   min-height: 0;
   height: 100%;
+  padding-top: 4px;
 }
 
 #keyboard {
   position: relative;
+  width: 100%;
   height: var(--key-h);
+  margin-top: -20px;
   display: flex;
   filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.6));
 }
