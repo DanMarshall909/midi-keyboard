@@ -308,8 +308,9 @@ window.addEventListener("wheel", (e) => {
   if (connected) invoke("send_cc", { channel, cc: 1, value: modValue }).catch(() => {});
 }, { passive: false });
 
-window.addEventListener("click", (e) => {
-  if (e.button !== 0) return;
+window.addEventListener("auxclick", (e) => {
+  if (e.button !== 1) return; // middle click
+  e.preventDefault();
   modValue = 0;
   if (connected) invoke("send_cc", { channel, cc: 1, value: 0 }).catch(() => {});
 });
