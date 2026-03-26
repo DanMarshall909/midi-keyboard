@@ -154,22 +154,28 @@ function initKeyboard3D() {
   // Camera — low perspective angle, player's-eye view
   const w = container.clientWidth  || 700;
   const h = container.clientHeight || 200;
-  kbCamera = new THREE.PerspectiveCamera(22, w / h, 0.1, 100);
-  kbCamera.position.set(0, 5.5, 11);
-  kbCamera.lookAt(0, 0, -0.5);
+  kbCamera = new THREE.PerspectiveCamera(30, w / h, 0.1, 100);
+  kbCamera.position.set(0, 15, 4);
+  kbCamera.lookAt(0, 0, 0);
   kbRenderer.setSize(w, h);
 
   // Lighting
   const ambient = new THREE.AmbientLight(0xffffff, 0.55);
   kbScene.add(ambient);
 
-  const sun = new THREE.DirectionalLight(0xfff8f0, 1.1);
-  sun.position.set(4, 12, 8);
+  const sun = new THREE.DirectionalLight(0xfffaf0, 1.1);
+  sun.position.set(7, 12, 8);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(1024, 1024);
+  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.camera.left   = -18;
+  sun.shadow.camera.right  =  18;
+  sun.shadow.camera.top    =  10;
+  sun.shadow.camera.bottom = -10;
+  sun.shadow.camera.near   =   1;
+  sun.shadow.camera.far    =  40;
   kbScene.add(sun);
 
-  const fill = new THREE.DirectionalLight(0xd0e8ff, 0.3);
+  const fill = new THREE.DirectionalLight(0x00e8ff, 0.9);
   fill.position.set(-6, 4, 4);
   kbScene.add(fill);
 
@@ -228,6 +234,7 @@ function buildKeys3D() {
       const x    = startX + (oct * 7 + i) * (WKW + KEY_GAP);
       const mesh = new THREE.Mesh(whiteGeo, matWhite());
       mesh.position.set(x, 0, 0);
+      mesh.castShadow    = true;
       mesh.receiveShadow = true;
       mesh.userData = { midi, isBlack: false, baseY: 0 };
       kbScene.add(mesh);
@@ -246,7 +253,8 @@ function buildKeys3D() {
       const x    = startX + (oct * 7 + bk.whitePos) * (WKW + KEY_GAP);
       const mesh = new THREE.Mesh(blackGeo, matBlack());
       mesh.position.set(x, blackY, blackZ);
-      mesh.castShadow  = true;
+      mesh.castShadow    = true;
+      mesh.receiveShadow = true;
       mesh.userData    = { midi, isBlack: true, baseY: blackY };
       kbScene.add(mesh);
       noteToMesh[midi] = mesh;
@@ -260,13 +268,9 @@ function setKeyActive(midi, on) {
   if (!mesh) return;
   const { isBlack, baseY } = mesh.userData;
   if (on) {
-    mesh.material.color.set(isBlack ? 0x2255aa : 0xb8d4ff);
-    mesh.material.emissive.set(isBlack ? 0x112244 : 0x334466);
-    mesh.position.y = baseY - (isBlack ? 0.06 : 0.04);
+    mesh.position.y = baseY - (isBlack ? 0.18 : 0.14);
     activeNotes.add(midi);
   } else {
-    mesh.material.color.set(isBlack ? 0x1c1c1c : 0xf0f0eb);
-    mesh.material.emissive.set(0x000000);
     mesh.position.y = baseY;
     activeNotes.delete(midi);
   }
