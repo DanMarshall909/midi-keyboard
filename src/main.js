@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
+import * as THREE from "three";
 
 // ── Key → MIDI note mapping (GarageBand layout) ──────────────────────────────
 const KEY_MAP = {
@@ -103,7 +104,6 @@ const channelSelect   = document.getElementById("channel-select");
 const patchSelect     = document.getElementById("patch-select");
 const statusEl        = document.getElementById("status");
 const arrowCcSelect   = document.getElementById("arrow-cc-select");
-const keyboardEl      = document.getElementById("keyboard");
 const keyboardContainer = document.getElementById("keyboard-container");
 const titlebar        = document.getElementById("titlebar");
 const knobsRow        = document.getElementById("knobs-row");
@@ -113,80 +113,185 @@ const modFill         = document.getElementById("mod-fill");
 const modGrip         = document.getElementById("mod-grip");
 const modValEl        = document.getElementById("mod-val");
 
-// ── Piano layout ──────────────────────────────────────────────────────────────
+// ── 3D Keyboard ───────────────────────────────────────────────────────────────
 const WHITE_OFFSETS = [0, 2, 4, 5, 7, 9, 11];
-let WHITE_KEY_WIDTH = 50;
-
-const BLACK_KEYS = [
-  { semitone: 1,  whitePos: 0.6 },
-  { semitone: 3,  whitePos: 1.6 },
-  { semitone: 6,  whitePos: 3.6 },
-  { semitone: 8,  whitePos: 4.6 },
-  { semitone: 10, whitePos: 5.6 },
+const BLACK_KEY_DEFS = [
+  { semitone: 1,  whitePos: 0.5 },
+  { semitone: 3,  whitePos: 1.5 },
+  { semitone: 6,  whitePos: 3.5 },
+  { semitone: 8,  whitePos: 4.5 },
+  { semitone: 10, whitePos: 5.5 },
 ];
 
-const noteToEl = {};
+// Key dimensions (Three.js units)
+const WKW = 1.85, WKH = 0.22, WKD = 5.8;   // white key width/height/depth
+const BKW = 1.1,  BKH = 0.55, BKD = 3.4;   // black key
+const KEY_GAP = 0.06;
 
-function buildKeyboard() {
-  keyboardEl.innerHTML = "";
+// Materials (cloned per key so we can tint individually)
+const matWhite = () => new THREE.MeshStandardMaterial({ color: 0xf0f0eb, roughness: 0.35, metalness: 0.0 });
+const matBlack = () => new THREE.MeshStandardMaterial({ color: 0x1c1c1c, roughness: 0.2,  metalness: 0.05 });
 
-  const totalOctaves = 2;
-  const totalWhiteKeys = totalOctaves * 7;
-  keyboardEl.style.width = `${totalWhiteKeys * WHITE_KEY_WIDTH}px`;
+const noteToMesh  = {};
+const meshToMidi  = new Map();
+const activeNotes = new Set();
 
+let kbScene, kbCamera, kbRenderer, kbRaycaster;
+
+function initKeyboard3D() {
+  const canvas    = document.getElementById("keyboard-canvas");
+  const container = keyboardContainer;
+
+  kbScene    = new THREE.Scene();
+  kbRaycaster = new THREE.Raycaster();
+
+  // Renderer
+  kbRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  kbRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  kbRenderer.shadowMap.enabled  = true;
+  kbRenderer.shadowMap.type     = THREE.PCFSoftShadowMap;
+
+  // Camera — low perspective angle, player's-eye view
+  const w = container.clientWidth  || 700;
+  const h = container.clientHeight || 200;
+  kbCamera = new THREE.PerspectiveCamera(22, w / h, 0.1, 100);
+  kbCamera.position.set(0, 5.5, 11);
+  kbCamera.lookAt(0, 0, -0.5);
+  kbRenderer.setSize(w, h);
+
+  // Lighting
+  const ambient = new THREE.AmbientLight(0xffffff, 0.55);
+  kbScene.add(ambient);
+
+  const sun = new THREE.DirectionalLight(0xfff8f0, 1.1);
+  sun.position.set(4, 12, 8);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(1024, 1024);
+  kbScene.add(sun);
+
+  const fill = new THREE.DirectionalLight(0xd0e8ff, 0.3);
+  fill.position.set(-6, 4, 4);
+  kbScene.add(fill);
+
+  // Keyboard frame / fallboard
+  const frameGeo = new THREE.BoxGeometry(14 * (WKW + KEY_GAP) + 0.4, 0.18, WKD + 0.6);
+  const frameMat = new THREE.MeshStandardMaterial({ color: 0x111118, roughness: 0.6 });
+  const frame = new THREE.Mesh(frameGeo, frameMat);
+  frame.position.set(0, -WKH / 2 - 0.09, 0);
+  frame.receiveShadow = true;
+  kbScene.add(frame);
+
+  buildKeys3D();
+
+  // Mouse events via raycasting
+  canvas.addEventListener("mousedown", (e) => {
+    if (e.button !== 0) return;
+    const midi = raycastMidi(e);
+    if (midi !== null) triggerNoteOn(midi);
+  });
+  canvas.addEventListener("mouseup", () => {
+    for (const midi of [...activeNotes]) triggerNoteOff(midi);
+  });
+  canvas.addEventListener("mouseleave", () => {
+    for (const midi of [...activeNotes]) triggerNoteOff(midi);
+  });
+  canvas.addEventListener("mousemove", (e) => {
+    // slide: release keys no longer under cursor while dragging
+    if (e.buttons !== 1) return;
+    const midi = raycastMidi(e);
+    for (const held of [...activeNotes]) {
+      if (held !== midi) triggerNoteOff(held);
+    }
+    if (midi !== null && !activeNotes.has(midi)) triggerNoteOn(midi);
+  });
+
+  // Render loop
+  (function loop() { requestAnimationFrame(loop); kbRenderer.render(kbScene, kbCamera); })();
+}
+
+function buildKeys3D() {
+  // Remove old meshes
+  for (const mesh of Object.values(noteToMesh)) kbScene.remove(mesh);
+  Object.keys(noteToMesh).forEach(k => delete noteToMesh[k]);
+  meshToMidi.clear();
+
+  const totalOctaves  = 2;
+  const totalWhite    = totalOctaves * 7;
+  const totalW        = totalWhite * (WKW + KEY_GAP);
+  const startX        = -totalW / 2 + (WKW + KEY_GAP) / 2;
+
+  // White keys
+  const whiteGeo = new THREE.BoxGeometry(WKW, WKH, WKD);
   for (let oct = 0; oct < totalOctaves; oct++) {
     for (let i = 0; i < WHITE_OFFSETS.length; i++) {
-      const semitone = oct * 12 + WHITE_OFFSETS[i];
       const midi = (baseOctave + oct) * 12 + 12 + WHITE_OFFSETS[i];
-      const el = document.createElement("div");
-      el.className = "key-white";
-      el.dataset.midi = midi;
-      el.dataset.label = keyLabel(semitone, oct);
-      el.textContent = el.dataset.label;
-      el.addEventListener("mousedown", (e) => { if (e.button === 0) triggerNoteOn(midi, el); });
-      el.addEventListener("mouseup",   () => triggerNoteOff(midi, el));
-      el.addEventListener("mouseleave", () => { if (el.classList.contains("active")) triggerNoteOff(midi, el); });
-      keyboardEl.appendChild(el);
-      noteToEl[midi] = el;
+      const x    = startX + (oct * 7 + i) * (WKW + KEY_GAP);
+      const mesh = new THREE.Mesh(whiteGeo, matWhite());
+      mesh.position.set(x, 0, 0);
+      mesh.receiveShadow = true;
+      mesh.userData = { midi, isBlack: false, baseY: 0 };
+      kbScene.add(mesh);
+      noteToMesh[midi] = mesh;
+      meshToMidi.set(mesh, midi);
     }
   }
 
+  // Black keys
+  const blackGeo = new THREE.BoxGeometry(BKW, BKH, BKD);
+  const blackY   = (WKH + BKH) / 2;
+  const blackZ   = -(WKD - BKD) / 2;
   for (let oct = 0; oct < totalOctaves; oct++) {
-    const octaveStartX = oct * 7 * WHITE_KEY_WIDTH;
-    for (const bk of BLACK_KEYS) {
+    for (const bk of BLACK_KEY_DEFS) {
       const midi = (baseOctave + oct) * 12 + 12 + bk.semitone;
-      const el = document.createElement("div");
-      el.className = "key-black";
-      el.dataset.midi = midi;
-      el.style.left = `${octaveStartX + bk.whitePos * WHITE_KEY_WIDTH - WHITE_KEY_WIDTH * 0.3}px`;
-      el.addEventListener("mousedown", (e) => { if (e.button === 0) { e.stopPropagation(); triggerNoteOn(midi, el); } });
-      el.addEventListener("mouseup",   (e) => { e.stopPropagation(); triggerNoteOff(midi, el); });
-      el.addEventListener("mouseleave", () => { if (el.classList.contains("active")) triggerNoteOff(midi, el); });
-      keyboardEl.appendChild(el);
-      noteToEl[midi] = el;
+      const x    = startX + (oct * 7 + bk.whitePos) * (WKW + KEY_GAP);
+      const mesh = new THREE.Mesh(blackGeo, matBlack());
+      mesh.position.set(x, blackY, blackZ);
+      mesh.castShadow  = true;
+      mesh.userData    = { midi, isBlack: true, baseY: blackY };
+      kbScene.add(mesh);
+      noteToMesh[midi] = mesh;
+      meshToMidi.set(mesh, midi);
     }
   }
 }
 
-function updateKeyDimensions() {
-  const totalWhiteKeys = 14;
-  const ASPECT = 3.6;
+function setKeyActive(midi, on) {
+  const mesh = noteToMesh[midi];
+  if (!mesh) return;
+  const { isBlack, baseY } = mesh.userData;
+  if (on) {
+    mesh.material.color.set(isBlack ? 0x2255aa : 0xb8d4ff);
+    mesh.material.emissive.set(isBlack ? 0x112244 : 0x334466);
+    mesh.position.y = baseY - (isBlack ? 0.06 : 0.04);
+    activeNotes.add(midi);
+  } else {
+    mesh.material.color.set(isBlack ? 0x1c1c1c : 0xf0f0eb);
+    mesh.material.emissive.set(0x000000);
+    mesh.position.y = baseY;
+    activeNotes.delete(midi);
+  }
+}
+
+function raycastMidi(event) {
+  const canvas = kbRenderer.domElement;
+  const rect   = canvas.getBoundingClientRect();
+  const x      =  ((event.clientX - rect.left)  / rect.width)  * 2 - 1;
+  const y      = -((event.clientY - rect.top)   / rect.height) * 2 + 1;
+  kbRaycaster.setFromCamera({ x, y }, kbCamera);
+  const hits = kbRaycaster.intersectObjects(Object.values(noteToMesh));
+  if (!hits.length) return null;
+  // Black keys take priority
+  const black = hits.find(h => h.object.userData.isBlack);
+  return meshToMidi.get((black || hits[0]).object) ?? null;
+}
+
+function resizeKeyboard3D() {
   const w = keyboardContainer.clientWidth;
   const h = keyboardContainer.clientHeight;
   if (w < 10 || h < 10) return;
-  WHITE_KEY_WIDTH = Math.min(w / totalWhiteKeys, (h * 0.95) / ASPECT);
-  const keyH = WHITE_KEY_WIDTH * ASPECT;
-  const root = document.documentElement;
-  root.style.setProperty("--key-w",  `${WHITE_KEY_WIDTH}px`);
-  root.style.setProperty("--key-h",  `${keyH}px`);
-  root.style.setProperty("--key-bw", `${WHITE_KEY_WIDTH * 0.6}px`);
-  root.style.setProperty("--key-bh", `${keyH * 0.61}px`);
-}
-
-function keyLabel(semitone, oct) {
-  const names = ["C", "", "D", "", "E", "F", "", "G", "", "A", "", "B"];
-  const name = names[semitone % 12];
-  return name ? `${name}${baseOctave + oct}` : "";
+  kbRenderer.setSize(w, h);
+  kbCamera.aspect = w / h;
+  kbCamera.updateProjectionMatrix();
 }
 
 // ── MIDI helpers ──────────────────────────────────────────────────────────────
@@ -196,10 +301,9 @@ function midiNoteFromKey(key) {
   return baseOctave * 12 + 12 + offset;
 }
 
-async function triggerNoteOn(midi, el) {
+async function triggerNoteOn(midi) {
   if (!connected) return;
-  el?.classList.add("active");
-
+  setKeyActive(midi, true);
   try {
     await invoke("note_on", { channel, note: midi, velocity });
   } catch (e) {
@@ -207,9 +311,9 @@ async function triggerNoteOn(midi, el) {
   }
 }
 
-async function triggerNoteOff(midi, el) {
+async function triggerNoteOff(midi) {
   if (!connected) return;
-  el?.classList.remove("active");
+  setKeyActive(midi, false);
   try {
     await invoke("note_off", { channel, note: midi });
   } catch (e) {
@@ -363,7 +467,7 @@ window.addEventListener("keydown", (e) => {
   if (midi === null) return;
   e.preventDefault();
   heldKeys.add(key);
-  triggerNoteOn(midi, noteToEl[midi]);
+  triggerNoteOn(midi);
 });
 
 window.addEventListener("keyup", (e) => {
@@ -376,7 +480,7 @@ window.addEventListener("keyup", (e) => {
   const midi = midiNoteFromKey(key);
   if (midi === null) return;
   e.preventDefault();
-  triggerNoteOff(midi, noteToEl[midi]);
+  triggerNoteOff(midi);
 });
 
 // Mouse wheel = modulation (CC 1)
@@ -408,7 +512,7 @@ window.addEventListener("blur", () => {
   }
   for (const key of heldKeys) {
     const midi = midiNoteFromKey(key);
-    if (midi !== null) triggerNoteOff(midi, noteToEl[midi]);
+    if (midi !== null) triggerNoteOff(midi);
   }
   heldKeys.clear();
 });
@@ -464,10 +568,10 @@ refreshBtn.addEventListener("click", loadPorts);
 
 // ── Controls ──────────────────────────────────────────────────────────────────
 octDownBtn.addEventListener("click", () => {
-  if (baseOctave > 0) { baseOctave--; octaveDisplay.textContent = baseOctave; buildKeyboard(); }
+  if (baseOctave > 0) { baseOctave--; octaveDisplay.textContent = baseOctave; buildKeys3D(); }
 });
 octUpBtn.addEventListener("click", () => {
-  if (baseOctave < 8) { baseOctave++; octaveDisplay.textContent = baseOctave; buildKeyboard(); }
+  if (baseOctave < 8) { baseOctave++; octaveDisplay.textContent = baseOctave; buildKeys3D(); }
 });
 
 // Channel selector
@@ -680,7 +784,7 @@ octaveDisplay.textContent = baseOctave;
 appTitle.textContent = GM_PATCH_NAMES[patch];
 updateZoomDisplay();
 loadPorts();
-buildKeyboard();
+initKeyboard3D();
 updateModWheel();
 
 appWindow.innerSize().then(s => appWindow.scaleFactor().then(sf => {
@@ -689,7 +793,6 @@ appWindow.innerSize().then(s => appWindow.scaleFactor().then(sf => {
 }));
 
 new ResizeObserver(() => {
-  updateKeyDimensions();
-  buildKeyboard();
+  resizeKeyboard3D();
   updateModWheel();
 }).observe(keyboardContainer);

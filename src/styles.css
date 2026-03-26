@@ -2,11 +2,6 @@
 
 /* ── Theme variables ─────────────────────────────────────────────────────────*/
 :root {
-  --key-w: 50px;
-  --key-h: 180px;
-  --key-bw: 30px;
-  --key-bh: 110px;
-
   /* Default: Dark blue */
   --bg-app:         rgba(14, 14, 24, 0.92);
   --bg-titlebar:    rgba(8, 8, 18, 0.5);
@@ -332,97 +327,8 @@ button:hover { background: var(--ctrl-hover); }
   pointer-events: none;
 }
 
-/* ── Keyboard ────────────────────────────────────────────────────────────────*/
-#keyboard {
-  position: relative;
-  height: var(--key-h);
-  display: flex;
-  filter: drop-shadow(0 12px 18px rgba(0,0,0,0.6));
-  margin-top: -4px;
-}
-
-.key-white {
-  position: relative;
-  width: var(--key-w);
-  height: var(--key-h);
-  background: linear-gradient(to bottom, #f0f0eb 0%, #fafaf7 8%, #ebebE6 70%, #d4d4cc 100%);
-  border-left: 1px solid #bbb;
-  border-right: 1px solid #999;
-  border-bottom: 1px solid #888;
-  border-radius: 0 0 6px 6px;
-  cursor: pointer;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding-bottom: 8px;
-  font-size: 10px;
-  color: #999;
-  box-shadow: inset 1px 0 0 rgba(255,255,255,0.9), inset -1px 0 0 rgba(0,0,0,0.06), 2px 4px 6px rgba(0,0,0,0.25);
-  transition: background 60ms, box-shadow 60ms, transform 60ms;
-  flex-shrink: 0;
-}
-
-.key-white:hover {
-  background: linear-gradient(to bottom, #e8e8e2 0%, #f2f2ee 8%, #e2e2dc 70%, #ccccc4 100%);
-}
-
-.key-white.active {
-  background: linear-gradient(to bottom, #f0f0eb 0%, #fafaf7 8%, #ebebE6 70%, #d4d4cc 100%);
-  color: var(--key-active-txt);
-  box-shadow: inset 1px 0 0 rgba(255,255,255,0.4), inset 0 4px 8px rgba(0,0,0,0.2), 1px 2px 3px rgba(0,0,0,0.2);
-}
-
-.key-black {
-  position: absolute;
-  width: var(--key-bw);
-  height: var(--key-bh);
-  background: linear-gradient(to bottom, #555 0%, #2a2a2a 12%, #1a1a1a 60%, #111 100%);
-  border-left: 1px solid #555;
-  border-right: 1px solid #111;
-  border-bottom: 2px solid #000;
-  border-radius: 0 0 5px 5px;
-  cursor: pointer;
-  z-index: 2;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding-bottom: 6px;
-  font-size: 9px;
-  color: #555;
-  box-shadow: inset 1px 0 0 rgba(255,255,255,0.12), inset -1px 0 0 rgba(0,0,0,0.4), 3px 6px 10px rgba(0,0,0,0.6), 1px 1px 0 #000;
-  transition: background 60ms, box-shadow 60ms, transform 60ms;
-}
-
-.key-black:hover {
-  background: linear-gradient(to bottom, #666 0%, #333 12%, #222 60%, #181818 100%);
-}
-
-.key-black.active {
-  background: linear-gradient(to bottom, #555 0%, #2a2a2a 12%, #1a1a1a 60%, #111 100%);
-  color: var(--key-black-active-txt);
-  box-shadow: inset 1px 0 0 rgba(255,255,255,0.2), inset 0 3px 6px rgba(0,0,0,0.4), 1px 3px 5px rgba(0,0,0,0.5);
-}
-
-/* ── LED ─────────────────────────────────────────────────────────────────────*/
-.key-led {
-  position: absolute;
-  top: 8px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--led-color, #90EE90);
-  box-shadow: 0 0 10px 2px var(--led-color, #90EE90);
-  pointer-events: none;
-  z-index: 10;
-  animation: ledFade 0.8s ease-out forwards;
-}
-
-@keyframes ledFade {
-  0%   { opacity: 1; box-shadow: 0 0 12px var(--led-color, #90EE90); }
-  100% { opacity: 0; box-shadow: 0 0 2px  var(--led-color, #90EE90); }
-}
+/* ── Keyboard canvas ─────────────────────────────────────────────────────────*/
+#keyboard-canvas { cursor: pointer; }
 
 /* ── Overlays ────────────────────────────────────────────────────────────────*/
 #help-overlay, #config-overlay {
