@@ -138,10 +138,12 @@ const activeNotes = new Set();
 let kbNeedsRender = true;
 
 let kbScene, kbCamera, kbRenderer, kbRaycaster;
-let kbSun, kbFill;
+let kbSun, kbFill, kbAmbient;
 let kbDiscoLights = [];
 let discoMode = false;
 let discoAngle = 0;
+let strobeBurstStart = -1;  // performance.now() timestamp, -1 = idle
+let strobeCountdown = 360;  // frames until next burst
 
 const THEME_LIGHTS = {
     default:   { sun: { color: 0xfffaf0, intensity: 1.1 }, fill: { color: 0x00e8ff, intensity: 0.9 } },
@@ -153,10 +155,24 @@ const THEME_LIGHTS = {
 
 function setThemeLighting(name) {
     if (!kbSun) return; // scene not yet initialized
-    // Tear down any existing disco lights
+    // Tear down any existing disco lights and clear inline CSS overrides
     for (const l of kbDiscoLights) kbScene.remove(l);
     kbDiscoLights = [];
     discoMode = false;
+    strobeBurstStart = -1;
+    strobeCountdown = 90;
+    if (kbAmbient) kbAmbient.intensity = 0.55;
+    for (const prop of [
+        '--accent','--accent-border','--accent-blight','--accent-glow','--accent-shadow',
+        '--accent-bg','--accent-bg2','--accent-bg3',
+        '--border-app','--border-sub','--border-ctrl','--border-modal',
+        '--ctrl-bg','--ctrl-hover',
+        '--knob-dot','--knob-ring',
+        '--text-heading','--text-dim','--text-muted','--hk-color',
+        '--mod-bg','--mod-border','--mod-grip-t','--mod-grip-b','--mod-grip-bdr',
+    ]) {
+        document.documentElement.style.removeProperty(prop);
+    }
 
     if (name === 'disco') {
         discoMode = true;
@@ -164,6 +180,7 @@ function setThemeLighting(name) {
         kbSun.intensity = 0.25;
         kbFill.color.set(0x101010);
         kbFill.intensity = 0.15;
+        kbAmbient.intensity = 0.3;
         for (let i = 0; i < 4; i++) {
             const pl = new THREE.PointLight(0xffffff, 3.5, 22);
             pl.castShadow = false;
@@ -204,11 +221,11 @@ function initKeyboard3D() {
     kbRenderer.setSize(w, h);
 
     // Lighting
-    const ambient = new THREE.AmbientLight(0xffffff, 0.55);
-    kbScene.add(ambient);
+    kbAmbient = new THREE.AmbientLight(0xffffff, 0.55);
+    kbScene.add(kbAmbient);
 
-    kbSun = new THREE.DirectionalLight(0xfffaf0, 0.1);
-    kbSun.position.set(7, 12, 8);
+    kbSun = new THREE.DirectionalLight(0xff0000, 10.1);
+    kbSun.position.set(-12, 12, -8);
     kbSun.castShadow = true;
     kbSun.shadow.mapSize.set(1024, 1024);
     kbSun.shadow.camera.left = -18;
@@ -219,8 +236,8 @@ function initKeyboard3D() {
     kbSun.shadow.camera.far = 40;
     kbScene.add(kbSun);
 
-    kbFill = new THREE.DirectionalLight(0x00e8ff, 0.9);
-    kbFill.position.set(-6, 4, 4);
+    kbFill = new THREE.DirectionalLight(0x00ff, 12.9);
+    kbFill.position.set(12, 12, -8);
     kbScene.add(kbFill);
 
     // Keyboard frame / fallboard
@@ -260,15 +277,65 @@ function initKeyboard3D() {
         requestAnimationFrame(loop);
         if (discoMode) {
             discoAngle += 0.02;
+            // Slowly drifting orbit center
+            const cx = Math.sin(discoAngle * 0.31) * 4.5;
+            const cz = Math.cos(discoAngle * 0.19) * 2.5;
             for (let i = 0; i < kbDiscoLights.length; i++) {
                 const a = discoAngle + i * (Math.PI / 2);
                 kbDiscoLights[i].position.set(
-                    Math.cos(a) * 9,
+                    cx + Math.cos(a) * 9,
                     5.5 + Math.sin(discoAngle * 1.7 + i) * 1.5,
-                    Math.sin(a) * 5
+                    cz + Math.sin(a) * 5
                 );
                 kbDiscoLights[i].color.setHSL(((discoAngle * 25 + i * 90) % 360) / 360, 1, 0.5);
             }
+            // Occasional 3-flash strobe burst
+            // Occasional 3-flash strobe burst, flashes 25 ms apart
+            const now = performance.now();
+            if (strobeBurstStart >= 0) {
+                const elapsed = now - strobeBurstStart;
+                const burstDuration = 3 * 25 * 2; // 3 flashes × (25ms on + 25ms off)
+                if (elapsed >= burstDuration) {
+                    kbAmbient.intensity = 0.3;
+                    strobeBurstStart = -1;
+                    strobeCountdown = 240 + Math.random() * 720;
+                } else {
+                    const slot = Math.floor(elapsed / 25);
+                    kbAmbient.intensity = (slot % 2 === 0) ? 1.2 : 0.3;
+                }
+            } else if (--strobeCountdown <= 0) {
+                strobeBurstStart = performance.now();
+            }
+            // Cycle every themed CSS variable through offset hues
+            const h1 = (discoAngle * 15) % 360;
+            const h2 = (h1 + 120) % 360;
+            const h3 = (h1 + 240) % 360;
+            const r = document.documentElement;
+            r.style.setProperty('--accent',        `hsl(${h1},100%,65%)`);
+            r.style.setProperty('--accent-border', `hsla(${h1},100%,65%,0.4)`);
+            r.style.setProperty('--accent-blight', `hsla(${h1},100%,65%,0.25)`);
+            r.style.setProperty('--accent-glow',   `hsla(${h1},100%,65%,0.2)`);
+            r.style.setProperty('--accent-shadow', `hsla(${h1},100%,65%,0.6)`);
+            r.style.setProperty('--accent-bg',     `hsla(${h1},80%,20%,0.4)`);
+            r.style.setProperty('--accent-bg2',    `hsla(${h1},80%,15%,0.55)`);
+            r.style.setProperty('--accent-bg3',    `hsla(${h1},80%,8%,0.9)`);
+            r.style.setProperty('--border-app',    `hsla(${h1},100%,60%,0.2)`);
+            r.style.setProperty('--border-sub',    `hsla(${h1},100%,60%,0.1)`);
+            r.style.setProperty('--border-ctrl',   `hsla(${h1},100%,60%,0.3)`);
+            r.style.setProperty('--border-modal',  `hsla(${h1},100%,60%,0.25)`);
+            r.style.setProperty('--ctrl-bg',       `hsla(${h1},100%,60%,0.08)`);
+            r.style.setProperty('--ctrl-hover',    `hsla(${h1},100%,60%,0.18)`);
+            r.style.setProperty('--knob-dot',      `hsl(${h1},100%,70%)`);
+            r.style.setProperty('--knob-ring',     `hsla(${h1},100%,65%,0.4)`);
+            r.style.setProperty('--text-heading',  `hsl(${h1},100%,75%)`);
+            r.style.setProperty('--text-dim',      `hsl(${h1},60%,45%)`);
+            r.style.setProperty('--text-muted',    `hsl(${h1},55%,35%)`);
+            r.style.setProperty('--hk-color',      `hsl(${h1},100%,65%)`);
+            r.style.setProperty('--mod-bg',        `hsla(${h1},60%,12%,0.55)`);
+            r.style.setProperty('--mod-border',    `hsla(${h1},100%,60%,0.2)`);
+            r.style.setProperty('--mod-grip-t',    `hsl(${h1},60%,30%)`);
+            r.style.setProperty('--mod-grip-b',    `hsl(${h1},60%,15%)`);
+            r.style.setProperty('--mod-grip-bdr',  `hsla(${h1},100%,65%,0.4)`);
             kbNeedsRender = true;
         }
         if (!kbNeedsRender) return;
@@ -782,6 +849,7 @@ window.addEventListener("load", () => {
     baseWidth = appEl.offsetWidth;
     baseHeight = appEl.offsetHeight;
     applyZoom();
+    loadPorts();
 });
 
 // Zoom controls (in config modal)
@@ -857,7 +925,6 @@ function setStatus(msg, type = "") {
 octaveDisplay.textContent = baseOctave;
 appTitle.textContent = GM_PATCH_NAMES[patch];
 updateZoomDisplay();
-loadPorts();
 initKeyboard3D();
 updateModWheel();
 
