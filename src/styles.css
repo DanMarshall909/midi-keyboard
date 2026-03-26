@@ -177,6 +177,41 @@
   --hk-color:       #00ff46;
 }
 
+:root[data-theme="disco"] {
+  --bg-app:         rgba(5, 0, 10, 0.97);
+  --bg-titlebar:    rgba(0, 0, 0, 0.8);
+  --bg-sidebar:     rgba(0, 0, 0, 0.6);
+  --bg-bar:         rgba(0, 0, 0, 0.6);
+  --bg-modal:       rgba(8, 0, 12, 0.99);
+  --border-app:     rgba(255, 0, 180, 0.2);
+  --border-sub:     rgba(255, 0, 180, 0.1);
+  --border-ctrl:    rgba(255, 0, 180, 0.25);
+  --border-modal:   rgba(255, 0, 180, 0.25);
+  --ctrl-bg:        rgba(255, 0, 180, 0.08);
+  --ctrl-hover:     rgba(255, 0, 180, 0.18);
+  --text-dim:       #aa44aa;
+  --text-muted:     #882288;
+  --text-heading:   #ff80ff;
+  --accent:         #ff00cc;
+  --accent-bg:      rgba(100, 0, 80, 0.4);
+  --accent-bg2:     rgba(60, 0, 50, 0.55);
+  --accent-bg3:     rgba(20, 0, 15, 0.9);
+  --accent-border:  rgba(255, 0, 200, 0.4);
+  --accent-blight:  rgba(255, 0, 200, 0.25);
+  --accent-glow:    rgba(255, 0, 200, 0.2);
+  --accent-shadow:  rgba(255, 0, 200, 0.6);
+  --knob-dot:       rgba(255, 100, 255, 0.95);
+  --knob-ring:      rgba(255, 0, 200, 0.4);
+  --mod-bg:         rgba(40, 0, 40, 0.55);
+  --mod-border:     rgba(255, 0, 180, 0.2);
+  --mod-grip-t:     #882288;
+  --mod-grip-b:     #440044;
+  --mod-grip-bdr:   rgba(255, 0, 200, 0.35);
+  --key-active-txt: #440022;
+  --key-black-active-txt: #ff00cc;
+  --hk-color:       #ff00cc;
+}
+
 /* ── Base ────────────────────────────────────────────────────────────────────*/
 body {
   background: transparent;
@@ -364,6 +399,7 @@ button:hover { background: var(--ctrl-hover); }
 .theme-swatch[data-theme="synthwave"] { background: radial-gradient(circle at 35% 35%, #e040fb, #0c0514); }
 .theme-swatch[data-theme="ember"]     { background: radial-gradient(circle at 35% 35%, #ffb300, #120a04); }
 .theme-swatch[data-theme="matrix"]    { background: radial-gradient(circle at 35% 35%, #00ff46, #000800); }
+.theme-swatch[data-theme="disco"]     { background: conic-gradient(from 0deg, #ff0040, #ffdd00, #00ff80, #00ccff, #aa00ff, #ff0040); }
 
 /* ── Sustain active ──────────────────────────────────────────────────────────*/
 #sustain-btn.active {
