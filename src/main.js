@@ -278,8 +278,8 @@ function initKeyboard3D() {
         if (discoMode) {
             discoAngle += 0.02;
             // Slowly drifting orbit center
-            const cx = Math.sin(discoAngle * 0.31) * 4.5;
-            const cz = Math.cos(discoAngle * 0.19) * 2.5;
+            const cx = Math.sin(discoAngle * 0.31) * 6.5;
+            const cz = Math.cos(discoAngle * 0.19) * 3.5;
             for (let i = 0; i < kbDiscoLights.length; i++) {
                 const a = discoAngle + i * (Math.PI / 2);
                 kbDiscoLights[i].position.set(
