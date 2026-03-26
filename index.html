@@ -8,141 +8,159 @@
   </head>
   <body>
     <div id="app">
-      <!-- Title bar -->
-      <div id="titlebar" data-tauri-drag-region>
-        <span id="app-title" data-tauri-drag-region>Acoustic Grand Piano</span>
-        <div id="titlebar-btns">
-          <button id="config-btn" title="Settings">⚙</button>
-          <button id="help-btn" title="Keyboard shortcuts">?</button>
-          <button id="close-btn" title="Close">✕</button>
+
+      <!-- ── Titlebar ── -->
+      <div id="titlebar" data-tauri-drag-region
+           class="flex items-center gap-2 px-2 h-[30px] shrink-0"
+           style="background:var(--bg-titlebar); border-bottom:1px solid var(--border-sub)">
+        <span id="app-title" data-tauri-drag-region
+              class="flex-1 min-w-0 truncate uppercase tracking-widest text-[10px]"
+              style="color:var(--text-dim)">Acoustic Grand Piano</span>
+        <select id="patch-select" class="text-[11px] max-w-[200px]"></select>
+        <select id="channel-select" class="text-[11px] w-[46px]"></select>
+        <div class="flex gap-1 shrink-0">
+          <button id="config-btn" title="Settings"
+                  class="w-[22px] h-[22px] p-0 flex items-center justify-center rounded-full text-[11px]"
+                  style="background:transparent; border-color:transparent; color:var(--text-dim)">⚙</button>
+          <button id="help-btn" title="Keyboard shortcuts"
+                  class="w-[22px] h-[22px] p-0 flex items-center justify-center rounded-full text-[11px]"
+                  style="background:transparent; border-color:transparent; color:var(--text-dim)">?</button>
+          <button id="close-btn" title="Close"
+                  class="w-[22px] h-[22px] p-0 flex items-center justify-center rounded-full text-[11px]"
+                  style="background:transparent; border-color:transparent; color:var(--text-muted)">✕</button>
         </div>
       </div>
 
-      <!-- Control bar (above keyboard) -->
-      <div id="control-bar">
-        <!-- Panel: Octave -->
-        <div class="ctrl-panel octave-panel">
-          <div class="ctrl-label">Oct</div>
-          <div class="octave-row">
+      <!-- ── Body: sidebar + main ── -->
+      <div class="flex flex-1 min-h-0">
+
+        <!-- Left sidebar: OCT + MOD -->
+        <div id="sidebar" class="flex flex-col items-center shrink-0 w-[64px] py-2 gap-2"
+             style="background:var(--bg-sidebar); border-right:1px solid var(--border-sub)">
+
+          <!-- OCT -->
+          <div class="flex flex-col items-center gap-1">
+            <span class="text-[9px] uppercase tracking-wider" style="color:var(--text-muted)">Oct</span>
+            <button id="oct-up"
+                    class="w-[20px] h-[20px] p-0 flex items-center justify-center text-[11px]">+</button>
             <span id="octave-display">4</span>
-            <div class="octave-buttons">
-              <button id="oct-up">+</button>
-              <button id="oct-down">−</button>
+            <button id="oct-down"
+                    class="w-[20px] h-[20px] p-0 flex items-center justify-center text-[11px]">−</button>
+          </div>
+
+          <!-- divider -->
+          <div class="w-full" style="border-top:1px solid var(--border-sub)"></div>
+
+          <!-- MOD -->
+          <div class="flex flex-col items-center gap-1 flex-1 min-h-0 w-full pb-1">
+            <span class="text-[9px] uppercase tracking-wider" style="color:var(--text-muted)">Mod</span>
+            <div id="mod-track" class="flex-1 min-h-0">
+              <div id="mod-fill"></div>
+              <div id="mod-grip"></div>
+            </div>
+            <span class="text-[10px]" id="mod-val" style="color:var(--text-muted)">0</span>
+          </div>
+
+        </div>
+
+        <!-- Right: knobs row + keyboard -->
+        <div class="flex flex-col flex-1 min-w-0 min-h-0">
+
+          <!-- Knobs row -->
+          <div id="knobs-row" class="flex items-center justify-center gap-6 px-4 py-1 shrink-0"
+               style="background:var(--bg-bar); border-bottom:1px solid var(--border-sub)">
+            <div class="flex flex-col items-center gap-1">
+              <span class="text-[9px] uppercase tracking-wider" style="color:var(--text-muted)">Vel</span>
+              <div class="knob" id="knob-vel" data-value="100" data-min="1" data-max="127"></div>
+              <span class="text-[10px]" id="knob-vel-val" style="color:var(--text-muted)">100</span>
+            </div>
+            <div class="flex flex-col items-center gap-1">
+              <span class="text-[9px] uppercase tracking-wider" style="color:var(--text-muted)">Pan</span>
+              <div class="knob" id="knob-pan" data-cc="10" data-value="64" data-min="0" data-max="127"></div>
+              <span class="text-[10px]" id="knob-pan-val" style="color:var(--text-muted)">64</span>
+            </div>
+            <div class="flex flex-col items-center gap-1">
+              <span class="text-[9px] uppercase tracking-wider" style="color:var(--text-muted)">Expr</span>
+              <div class="knob" id="knob-expr" data-cc="11" data-value="127" data-min="0" data-max="127"></div>
+              <span class="text-[10px]" id="knob-expr-val" style="color:var(--text-muted)">127</span>
+            </div>
+            <div class="flex flex-col items-center gap-1">
+              <span class="text-[9px] uppercase tracking-wider" style="color:var(--text-muted)">Rev</span>
+              <div class="knob" id="knob-rev" data-cc="91" data-value="0" data-min="0" data-max="127"></div>
+              <span class="text-[10px]" id="knob-rev-val" style="color:var(--text-muted)">0</span>
+            </div>
+            <div class="flex flex-col items-center gap-1">
+              <span class="text-[9px] uppercase tracking-wider" style="color:var(--text-muted)">Cho</span>
+              <div class="knob" id="knob-cho" data-cc="93" data-value="0" data-min="0" data-max="127"></div>
+              <span class="text-[10px]" id="knob-cho-val" style="color:var(--text-muted)">0</span>
             </div>
           </div>
-        </div>
 
-        <!-- Panel: Patch & Channel -->
-        <div class="ctrl-panel patch-channel-panel">
-          <div class="ctrl-item">
-            <div class="ctrl-label">Patch</div>
-            <select id="patch-select"></select>
+          <!-- Keyboard -->
+          <div id="keyboard-area" class="flex-1 min-h-0 flex flex-col">
+            <div id="keyboard-container" class="flex-1 flex justify-center items-stretch overflow-hidden min-h-0 pt-1">
+              <div id="keyboard"></div>
+            </div>
           </div>
-          <div class="ctrl-item">
-            <div class="ctrl-label">Channel</div>
-            <select id="channel-select"></select>
-          </div>
-        </div>
 
-        <!-- Panel: Knobs -->
-        <div class="ctrl-panel knobs-panel">
-          <div class="knob-cell">
-            <div class="ctrl-label">Vel</div>
-            <div class="knob" id="knob-vel" data-value="100" data-min="1" data-max="127"></div>
-            <div class="knob-val" id="knob-vel-val">100</div>
-          </div>
-          <div class="knob-cell">
-            <div class="ctrl-label">Pan</div>
-            <div class="knob" id="knob-pan" data-cc="10" data-value="64" data-min="0" data-max="127"></div>
-            <div class="knob-val" id="knob-pan-val">64</div>
-          </div>
-          <div class="knob-cell">
-            <div class="ctrl-label">Expr</div>
-            <div class="knob" id="knob-expr" data-cc="11" data-value="127" data-min="0" data-max="127"></div>
-            <div class="knob-val" id="knob-expr-val">127</div>
-          </div>
-          <div class="knob-cell">
-            <div class="ctrl-label">Rev</div>
-            <div class="knob" id="knob-rev" data-cc="91" data-value="0" data-min="0" data-max="127"></div>
-            <div class="knob-val" id="knob-rev-val">0</div>
-          </div>
-          <div class="knob-cell">
-            <div class="ctrl-label">Cho</div>
-            <div class="knob" id="knob-cho" data-cc="93" data-value="0" data-min="0" data-max="127"></div>
-            <div class="knob-val" id="knob-cho-val">0</div>
-          </div>
         </div>
       </div>
 
-      <!-- Main area: mod wheel + keyboard -->
-      <div id="main-area">
-        <!-- Mod wheel (left side) -->
-        <div class="mod-item">
-          <div class="ctrl-label">Mod</div>
-          <div id="mod-track">
-            <div id="mod-fill"></div>
-            <div id="mod-grip"></div>
-          </div>
-          <div class="knob-val" id="mod-val">0</div>
-        </div>
-
-        <!-- Keyboard area -->
-        <div id="keyboard-area">
-          <div id="keyboard-container">
-            <div id="keyboard"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Help overlay -->
+      <!-- ── Help overlay ── -->
       <div id="help-overlay" class="hidden">
-        <div id="help-box">
-          <div id="help-header">
-            <h3>Keyboard Shortcuts</h3>
-            <button id="help-close">✕</button>
+        <div class="rounded-lg p-5 max-w-[520px] w-[90%]"
+             style="background:var(--bg-modal); border:1px solid var(--border-modal)">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-[13px] font-semibold tracking-wide" style="color:var(--text-heading)">Keyboard Shortcuts</h3>
+            <button id="help-close"
+                    class="w-5 h-5 p-0 flex items-center justify-center rounded-full text-[10px]"
+                    style="background:transparent; border-color:transparent; color:var(--text-dim)">✕</button>
           </div>
-          <table id="help-table">
+          <table class="w-full text-[12px] border-collapse">
             <tbody>
-              <tr><td class="hk">z s x d c &nbsp; v g b h n j m</td><td>Lower octave — C D E F G A B (s d g h j = sharps)</td></tr>
-              <tr><td class="hk">q 2 w 3 e &nbsp; r 5 t 6 y 7 u</td><td>Upper octave — C D E F G A B (2 3 5 6 7 = sharps)</td></tr>
-              <tr><td class="hk">Space (hold)</td><td>Sustain pedal (CC 64)</td></tr>
-              <tr><td class="hk">F1 – F9</td><td>Set octave 0 – 8</td></tr>
-              <tr><td class="hk">↑ &nbsp;/&nbsp; →</td><td>Step arrow CC up by 5</td></tr>
-              <tr><td class="hk">↓ &nbsp;/&nbsp; ←</td><td>Step arrow CC down by 5</td></tr>
-              <tr><td class="hk">Scroll wheel</td><td>Modulation (CC 1) ± 5</td></tr>
-              <tr><td class="hk">Middle click</td><td>Reset modulation to 0</td></tr>
+              <tr class="border-b" style="border-color:var(--border-sub)"><td class="py-1 pr-4 font-mono text-[11px] whitespace-nowrap" style="color:var(--hk-color)">z s x d c &nbsp; v g b h n j m</td><td style="color:var(--text-dim)">Lower octave — C D E F G A B (s d g h j = sharps)</td></tr>
+              <tr class="border-b" style="border-color:var(--border-sub)"><td class="py-1 pr-4 font-mono text-[11px] whitespace-nowrap" style="color:var(--hk-color)">q 2 w 3 e &nbsp; r 5 t 6 y 7 u</td><td style="color:var(--text-dim)">Upper octave — C D E F G A B (2 3 5 6 7 = sharps)</td></tr>
+              <tr class="border-b" style="border-color:var(--border-sub)"><td class="py-1 pr-4 font-mono text-[11px]" style="color:var(--hk-color)">Space (hold)</td><td style="color:var(--text-dim)">Sustain pedal (CC 64)</td></tr>
+              <tr class="border-b" style="border-color:var(--border-sub)"><td class="py-1 pr-4 font-mono text-[11px]" style="color:var(--hk-color)">F1 – F9</td><td style="color:var(--text-dim)">Set octave 0 – 8</td></tr>
+              <tr class="border-b" style="border-color:var(--border-sub)"><td class="py-1 pr-4 font-mono text-[11px]" style="color:var(--hk-color)">↑ &nbsp;/&nbsp; →</td><td style="color:var(--text-dim)">Step arrow CC up by 5</td></tr>
+              <tr class="border-b" style="border-color:var(--border-sub)"><td class="py-1 pr-4 font-mono text-[11px]" style="color:var(--hk-color)">↓ &nbsp;/&nbsp; ←</td><td style="color:var(--text-dim)">Step arrow CC down by 5</td></tr>
+              <tr class="border-b" style="border-color:var(--border-sub)"><td class="py-1 pr-4 font-mono text-[11px]" style="color:var(--hk-color)">Scroll wheel</td><td style="color:var(--text-dim)">Modulation (CC 1) ± 5</td></tr>
+              <tr><td class="py-1 pr-4 font-mono text-[11px]" style="color:var(--hk-color)">Middle click</td><td style="color:var(--text-dim)">Reset modulation to 0</td></tr>
             </tbody>
           </table>
         </div>
       </div>
 
-      <!-- Config modal -->
+      <!-- ── Config overlay ── -->
       <div id="config-overlay" class="hidden">
-        <div id="config-box">
-          <div id="config-header">
-            <h3>Settings</h3>
-            <button id="config-close">✕</button>
+        <div class="rounded-lg p-5 max-w-[300px] w-[90%]"
+             style="background:var(--bg-modal); border:1px solid var(--border-modal)">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-[13px] font-semibold tracking-wide" style="color:var(--text-heading)">Settings</h3>
+            <button id="config-close"
+                    class="w-5 h-5 p-0 flex items-center justify-center rounded-full text-[10px]"
+                    style="background:transparent; border-color:transparent; color:var(--text-dim)">✕</button>
           </div>
-          <div id="config-body">
-            <div class="cfg-row">
-              <label class="cfg-label">MIDI Port</label>
-              <div class="ctrl-row">
-                <select id="port-select"><option value="">-- Port --</option></select>
-                <button id="refresh-btn" title="Refresh ports">⟳</button>
+          <div class="flex flex-col gap-3">
+
+            <div class="flex flex-col gap-1">
+              <label class="text-[9px] uppercase tracking-wider" style="color:var(--text-muted)">MIDI Port</label>
+              <div class="flex gap-1 items-center">
+                <select id="port-select" class="flex-1"><option value="">-- Port --</option></select>
+                <button id="refresh-btn" title="Refresh ports"
+                        class="w-[22px] h-[22px] p-0 flex items-center justify-center text-[13px]">⟳</button>
               </div>
-              <div id="status"></div>
+              <div id="status" class="text-[10px] min-h-[13px]" style="color:var(--text-muted)"></div>
             </div>
-            <div class="cfg-row">
-              <label class="cfg-label">Channel</label>
-              <select id="channel-select"></select>
-            </div>
-            <div class="cfg-row">
-              <label class="cfg-label">↑↓ Arrow CC</label>
+
+            <div class="flex flex-col gap-1">
+              <label class="text-[9px] uppercase tracking-wider" style="color:var(--text-muted)">↑↓ Arrow CC</label>
               <select id="arrow-cc-select"></select>
             </div>
-            <div class="cfg-row">
-              <label class="cfg-label">Theme</label>
-              <div class="theme-swatches">
+
+            <div class="flex flex-col gap-1">
+              <label class="text-[9px] uppercase tracking-wider" style="color:var(--text-muted)">Theme</label>
+              <div class="flex gap-2 items-center">
                 <div class="theme-swatch active" data-theme="default"   title="Default"></div>
                 <div class="theme-swatch"         data-theme="midnight"  title="Midnight"></div>
                 <div class="theme-swatch"         data-theme="synthwave" title="Synthwave"></div>
@@ -150,14 +168,16 @@
                 <div class="theme-swatch"         data-theme="matrix"    title="Matrix"></div>
               </div>
             </div>
-            <div class="cfg-row">
-              <label class="cfg-label">Zoom</label>
-              <div class="zoom-controls">
-                <button id="zoom-out" title="Zoom out">−</button>
-                <span id="zoom-display">100%</span>
-                <button id="zoom-in" title="Zoom in">+</button>
+
+            <div class="flex flex-col gap-1">
+              <label class="text-[9px] uppercase tracking-wider" style="color:var(--text-muted)">Zoom</label>
+              <div class="flex items-center gap-2">
+                <button id="zoom-out" class="min-w-[32px]">−</button>
+                <span id="zoom-display" class="font-mono text-[11px] min-w-[40px] text-center" style="color:var(--accent)">100%</span>
+                <button id="zoom-in"  class="min-w-[32px]">+</button>
               </div>
             </div>
+
           </div>
         </div>
       </div>
