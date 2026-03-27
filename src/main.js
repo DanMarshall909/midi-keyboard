@@ -234,9 +234,9 @@ function initKeyboard3D() {
     // Camera — elevated front angle showing full keyboard depth
     const w = container.clientWidth || 700;
     const h = container.clientHeight || 200;
-    kbCamera = new THREE.PerspectiveCamera(22.5, w / h, 0.1, 100);
-    const xOffset = 2.5; // slight right offset looks better with mod wheel on left
-    kbCamera.position.set(xOffset, 16, 5);
+    kbCamera = new THREE.PerspectiveCamera(24, w / h, 0.1, 100);
+    const xOffset = 2.15; // slight right offset looks better with mod wheel on left
+    kbCamera.position.set(xOffset, 13, 12);
     kbCamera.lookAt(xOffset, 0, -0.25);
     kbRenderer.setSize(w, h);
 
