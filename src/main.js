@@ -92,6 +92,7 @@ let connected = false;
 let arrowCc = 10;
 let arrowCcValue = 64;
 let modValue = 0;
+let pitchValue = 0;   // -127 to +127, springs back to 0 on release
 const heldKeys = new Set();
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
@@ -137,6 +138,8 @@ const SCENE_KNOBS = [
 ];
 let kbModWheelSpinner = null;
 let kbModWheelHitbox = null;
+let kbPitchWheelSpinner = null;
+let kbPitchWheelHitbox = null;
 const kbKnobBodies = [];   // THREE.Mesh per knob (for raycasting + rotation)
 
 // Shared materials — no per-key cloning
@@ -263,8 +266,9 @@ function initKeyboard3D() {
     // Spans key area plus mod wheel to the left
     const wheelW = 0.55;
     const keyLeftEdge = KEY_OFFSET_X - totalKeyW / 2;
-    const modCX = keyLeftEdge - 0.35 - wheelW / 2;  // matches initSceneControls
-    const bodyLeft = modCX - wheelW / 2 - 0.5;
+    const modCX   = keyLeftEdge - 0.35 - wheelW / 2;  // matches initSceneControls
+    const pitchCX = modCX - wheelW - 0.22;             // pitch wheel left of mod
+    const bodyLeft = pitchCX - wheelW / 2 - 0.4;
     const bodyRight = KEY_OFFSET_X + totalKeyW / 2 + 0.3;
     const bodyW = bodyRight - bodyLeft;
     const bodyCX = (bodyLeft + bodyRight) / 2;
@@ -334,6 +338,15 @@ function initKeyboard3D() {
             }
         }
 
+        // Priority 3: pitch wheel
+        if (kbPitchWheelHitbox) {
+            const pwHits = kbRaycaster.intersectObject(kbPitchWheelHitbox, false);
+            if (pwHits.length) {
+                dragInfo = { type: 'pitchwheel', startY: e.clientY, startVal: pitchValue };
+                return;
+            }
+        }
+
         // Priority 3: keys
         const midi = raycastMidi(e);
         if (midi !== null) {
@@ -364,6 +377,15 @@ function initKeyboard3D() {
             return;
         }
 
+        if (dragInfo.type === 'pitchwheel') {
+            const dy = dragInfo.startY - e.clientY;
+            pitchValue = Math.max(-127, Math.min(127, Math.round(dragInfo.startVal + dy * 127 / 35)));
+            updateScenePitchWheel();
+            const bend = Math.round(pitchValue / 127 * 8191);
+            if (connected) invoke("pitch_bend", { channel, value: bend }).catch(() => { });
+            return;
+        }
+
         if (dragInfo.type === 'knob') {
             const { ki, startY, startVal } = dragInfo;
             const kd = SCENE_KNOBS[ki];
@@ -384,12 +406,22 @@ function initKeyboard3D() {
         if (dragInfo?.type === 'key') {
             for (const midi of [...activeNotes]) triggerNoteOff(midi);
         }
+        if (dragInfo?.type === 'pitchwheel') {
+            pitchValue = 0;
+            updateScenePitchWheel();
+            if (connected) invoke("pitch_bend", { channel, value: 0 }).catch(() => { });
+        }
         dragInfo = null;
     });
 
     canvas.addEventListener("mouseleave", () => {
         if (dragInfo?.type === 'key') {
             for (const midi of [...activeNotes]) triggerNoteOff(midi);
+        }
+        if (dragInfo?.type === 'pitchwheel') {
+            pitchValue = 0;
+            updateScenePitchWheel();
+            if (connected) invoke("pitch_bend", { channel, value: 0 }).catch(() => { });
         }
         dragInfo = null;
     });
@@ -610,44 +642,72 @@ function initSceneControls() {
     const panelCX = keyLeftEdge - 0.35 - 0.55 / 2;  // wheel snug left of keys
 
 
-    // ── Mod wheel ────────────────────────────────────────────────────────────
-    // Deep-set wheel: center below body surface, only ridged top arc exposed
+    // ── Shared wheel dimensions ───────────────────────────────────────────────
     const modWheelY = -0.4;
-    const wheelR = 1.15;   // large radius matching reference controller
-    const wheelW = 0.55;   // width along rotation axis
+    const wheelR    = 1.15;
+    const wheelW    = 0.55;
+    const pitchCX   = panelCX - wheelW - 0.22;  // pitch wheel left of mod wheel
+    const markerMat = new THREE.MeshStandardMaterial({
+        color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.9,
+        roughness: 0.1, metalness: 0.0,
+    });
 
-    kbModWheelSpinner = new THREE.Group();
+    function buildWheel(cx) {
+        const spinner = new THREE.Group();
+        const bodyGeo = new THREE.CylinderGeometry(wheelR, wheelR, wheelW, 36);
+        bodyGeo.rotateZ(Math.PI / 2);
+        spinner.add(new THREE.Mesh(bodyGeo,
+            new THREE.MeshStandardMaterial({ color: 0x111114, roughness: 0.70, metalness: 0.18 })
+        ));
+        // 11 ribs
+        const ridgeMat = new THREE.MeshStandardMaterial({ color: 0x0c0c0e, roughness: 0.88, metalness: 0.05 });
+        const ridgeCount = 11;
+        const ridgeStep = wheelW / (ridgeCount + 1);
+        for (let i = 0; i < ridgeCount; i++) {
+            const rGeo = new THREE.CylinderGeometry(wheelR + 0.10, wheelR + 0.10, 0.038, 36);
+            rGeo.rotateZ(Math.PI / 2);
+            const r = new THREE.Mesh(rGeo, ridgeMat);
+            r.position.x = -wheelW / 2 + ridgeStep * (i + 1);
+            spinner.add(r);
+        }
+        // Bright center-marker stripe at 12 o'clock (top of wheel, zero position)
+        const stripGeo = new THREE.CylinderGeometry(wheelR + 0.12, wheelR + 0.12, 0.06, 36);
+        stripGeo.rotateZ(Math.PI / 2);
+        spinner.add(new THREE.Mesh(stripGeo, markerMat));
 
-    // Main wheel cylinder
-    const modBodyGeo = new THREE.CylinderGeometry(wheelR, wheelR, wheelW, 36);
-    modBodyGeo.rotateZ(Math.PI / 2);
-    kbModWheelSpinner.add(new THREE.Mesh(modBodyGeo,
-        new THREE.MeshStandardMaterial({ color: 0x111114, roughness: 0.70, metalness: 0.18 })
-    ));
+        spinner.position.set(cx, modWheelY, 0);
+        kbScene.add(spinner);
 
-    // 11 pronounced horizontal ribs across the width (like the reference photo)
-    const ridgeMat = new THREE.MeshStandardMaterial({ color: 0x0c0c0e, roughness: 0.88, metalness: 0.05 });
-    const ridgeCount = 11;
-    const ridgeStep = wheelW / (ridgeCount + 1);
-    for (let i = 0; i < ridgeCount; i++) {
-        const rGeo = new THREE.CylinderGeometry(wheelR + 0.10, wheelR + 0.10, 0.038, 36);
-        rGeo.rotateZ(Math.PI / 2);
-        const r = new THREE.Mesh(rGeo, ridgeMat);
-        r.position.x = -wheelW / 2 + ridgeStep * (i + 1);
-        kbModWheelSpinner.add(r);
+        // Housing center-notch — small bright tab on the body surface above center
+        const notch = new THREE.Mesh(
+            new THREE.BoxGeometry(wheelW + 0.1, 0.06, 0.18),
+            markerMat
+        );
+        notch.position.set(cx, -WKH / 2 + 0.03, 0);
+        kbScene.add(notch);
+
+        // Hitbox
+        const hitbox = new THREE.Mesh(
+            new THREE.BoxGeometry(wheelW + 0.2, 1.4, 1.4),
+            new THREE.MeshStandardMaterial({ visible: false })
+        );
+        hitbox.position.set(cx, modWheelY + 0.5, 0);
+        kbScene.add(hitbox);
+
+        return { spinner, hitbox };
     }
 
-    kbModWheelSpinner.position.set(panelCX, modWheelY, 0);
-    kbScene.add(kbModWheelSpinner);
-
-    // Invisible hitbox covering the exposed top arc
-    kbModWheelHitbox = new THREE.Mesh(
-        new THREE.BoxGeometry(wheelW + 0.2, 1.4, 1.4),
-        new THREE.MeshStandardMaterial({ visible: false })
-    );
-    kbModWheelHitbox.position.set(panelCX, modWheelY + 0.5, 0);
+    // ── Mod wheel (CC 1 — modulation, stays put) ──────────────────────────────
+    const modWheelObj = buildWheel(panelCX);
+    kbModWheelSpinner = modWheelObj.spinner;
+    kbModWheelHitbox  = modWheelObj.hitbox;
     kbModWheelHitbox.userData = { type: 'modwheel' };
-    kbScene.add(kbModWheelHitbox);
+
+    // ── Pitch wheel (pitch bend — springs to centre on release) ───────────────
+    const pitchWheelObj = buildWheel(pitchCX);
+    kbPitchWheelSpinner = pitchWheelObj.spinner;
+    kbPitchWheelHitbox  = pitchWheelObj.hitbox;
+    kbPitchWheelHitbox.userData = { type: 'pitchwheel' };
 
     // ── 5 Knobs — sit on top of the raised head slab ─────────────────────────
     const knobBaseZ = -(BODY_D / 2 - HEAD_D / 2);          // centre of head slab
@@ -695,6 +755,12 @@ function initSceneControls() {
 function updateSceneModWheel() {
     if (!kbModWheelSpinner) return;
     kbModWheelSpinner.rotation.x = -(modValue / 127) * (Math.PI * 0.65);
+    kbNeedsRender = true;
+}
+
+function updateScenePitchWheel() {
+    if (!kbPitchWheelSpinner) return;
+    kbPitchWheelSpinner.rotation.x = -(pitchValue / 127) * (Math.PI * 0.55);
     kbNeedsRender = true;
 }
 

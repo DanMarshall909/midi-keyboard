@@ -13,9 +13,9 @@
       {
         "title": "MIDI Keyboard",
         "width": 860,
-        "height": 320,
+        "height": 360,
         "minWidth": 430,
-        "minHeight": 160,
+        "minHeight": 180,
         "resizable": false,
         "transparent": true,
         "decorations": false,

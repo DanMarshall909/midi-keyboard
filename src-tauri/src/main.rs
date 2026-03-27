@@ -73,6 +73,20 @@ fn program_change(state: State<MidiState>, channel: u8, program: u8) -> Result<(
 }
 
 #[tauri::command]
+fn pitch_bend(state: State<MidiState>, channel: u8, value: i16) -> Result<(), String> {
+    let midi_val = (value.clamp(-8192, 8191) + 8192) as u16;
+    let lsb = (midi_val & 0x7F) as u8;
+    let msb = ((midi_val >> 7) & 0x7F) as u8;
+    let mut guard = state.connection.lock().unwrap();
+    match guard.as_mut() {
+        Some(conn) => conn
+            .send(&[0xE0 | (channel & 0x0F), lsb, msb])
+            .map_err(|e| e.to_string()),
+        None => Err("No MIDI port connected".to_string()),
+    }
+}
+
+#[tauri::command]
 fn note_off(state: State<MidiState>, channel: u8, note: u8) -> Result<(), String> {
     let mut guard = state.connection.lock().unwrap();
     match guard.as_mut() {
@@ -96,6 +110,7 @@ fn main() {
             note_off,
             send_cc,
             program_change,
+            pitch_bend,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
