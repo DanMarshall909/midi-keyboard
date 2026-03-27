@@ -236,8 +236,9 @@ function initKeyboard3D() {
     const h = container.clientHeight || 200;
     kbCamera = new THREE.PerspectiveCamera(24, w / h, 0.1, 100);
     const xOffset = 2.15; // slight right offset looks better with mod wheel on left
-    kbCamera.position.set(xOffset, 13, 12);
-    kbCamera.lookAt(xOffset, 0, -2.5);
+    const zOffset =0.3;  // small forward offset to better frame the keys
+    kbCamera.position.set(xOffset, 13, 12+zOffset);
+    kbCamera.lookAt(xOffset, -5, -2.5+zOffset);
     kbRenderer.setSize(w, h);
 
     // Lighting
@@ -648,7 +649,7 @@ function initSceneControls() {
     const wheelW    = 0.55;
     const pitchCX   = panelCX - wheelW - 0.22;  // pitch wheel left of mod wheel
     const markerMat = new THREE.MeshStandardMaterial({
-        color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.9,
+        color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.3,
         roughness: 0.1, metalness: 0.0,
     });
 
@@ -672,7 +673,7 @@ function initSceneControls() {
         }
         // Bright horizontal marker at 12 o'clock — box spans wheel width along X
         const strip = new THREE.Mesh(
-            new THREE.BoxGeometry(wheelW + 0.02, 0.07, 0.09),
+            new THREE.BoxGeometry(wheelW + 0.02, 0.13, 0.09),
             markerMat
         );
         strip.position.set(0, wheelR + 0.04, 0);
@@ -683,8 +684,8 @@ function initSceneControls() {
 
         // Housing center-notch — small bright tab on the body surface above center
         const notch = new THREE.Mesh(
-            new THREE.BoxGeometry(wheelW + 0.1, 0.06, 0.18),
-            markerMat
+            new THREE.BoxGeometry(wheelW + 0.1, 0.3, 0.18),
+            matHousing
         );
         notch.position.set(cx, -WKH / 2 + 0.03, 0);
         kbScene.add(notch);
