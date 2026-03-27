@@ -202,39 +202,8 @@ button:hover { background: var(--ctrl-hover); }
   cursor: ns-resize;
 }
 
-/* ── Mod wheel ───────────────────────────────────────────────────────────────*/
-#mod-track {
-  width: 28px;
-  flex: 1;
-  background: var(--mod-bg);
-  border: 1px solid var(--mod-border);
-  border-radius: 14px;
-  position: relative;
-  overflow: hidden;
-  cursor: ns-resize;
-}
-
-#mod-fill {
-  position: absolute;
-  left: 0; right: 0;
-  height: 0;
-  background: transparent;
-  border-radius: 14px;
-  pointer-events: none;
-}
-
-#mod-grip {
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 18px;
-  height: 18px;
-  background: linear-gradient(to bottom, var(--mod-grip-t), var(--mod-grip-b));
-  border: 1px solid var(--mod-grip-bdr);
-  border-radius: 4px;
-  pointer-events: none;
-}
+/* ── Mod wheel canvas ────────────────────────────────────────────────────────*/
+#mod-wheel-canvas { display: block; }
 
 /* ── Keyboard canvas ─────────────────────────────────────────────────────────*/
 #keyboard-canvas { cursor: pointer; }

@@ -72,9 +72,8 @@
             <!-- MOD wheel -->
             <div class="flex flex-col items-center gap-1 shrink-0">
               <span class="text-[8px] uppercase tracking-wider" style="color:var(--text-muted)">Mod</span>
-              <div id="mod-track" class="flex-1 min-h-0">
-                <div id="mod-fill"></div>
-                <div id="mod-grip"></div>
+              <div id="mod-wheel-wrap" style="flex:1;min-height:0;width:44px;position:relative">
+                <canvas id="mod-wheel-canvas" style="position:absolute;inset:0;width:100%;height:100%;cursor:ns-resize"></canvas>
               </div>
               <span id="mod-val" class="lcd-val">0</span>
             </div>

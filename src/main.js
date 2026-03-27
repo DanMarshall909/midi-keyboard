@@ -106,9 +106,6 @@ const arrowCcSelect = document.getElementById("arrow-cc-select");
 const keyboardContainer = document.getElementById("keyboard-container");
 const titlebar = document.getElementById("titlebar");
 const sidebar = document.getElementById("sidebar");
-const modTrack = document.getElementById("mod-track");
-const modFill = document.getElementById("mod-fill");
-const modGrip = document.getElementById("mod-grip");
 const modValEl = document.getElementById("mod-val");
 
 // ── 3D Keyboard ───────────────────────────────────────────────────────────────
@@ -459,52 +456,97 @@ async function triggerNoteOff(midi) {
     }
 }
 
-// ── Mod wheel (centered, ±127 range) ──────────────────────────────────────────
-function updateModWheel() {
-    const trackH = modTrack.clientHeight || 80;  // fallback to default height if layout not ready
-    const gripH = 18;
+// ── 3D Mod Wheel ──────────────────────────────────────────────────────────────
+let modWheelRenderer, modWheelScene, modWheelCamera, modWheelSpinner, modWheelTabMat;
 
-    // Center position for value 0
-    const centerPos = (trackH - gripH) / 2;
+function initModWheel3D() {
+    const canvas = document.getElementById("mod-wheel-canvas");
+    const wrap   = document.getElementById("mod-wheel-wrap");
+    const W = wrap.clientWidth  || 44;
+    const H = wrap.clientHeight || 150;
 
-    if (modValue >= 0) {
-        // Positive: fill upward from center
-        const fillHeight = (modValue / 127) * centerPos;
-        modFill.style.height = `${fillHeight}px`;
-        modFill.style.bottom = `${centerPos}px`;
-    } else {
-        // Negative: fill downward from center
-        const fillHeight = (-modValue / 127) * centerPos;
-        modFill.style.height = `${fillHeight}px`;
-        modFill.style.bottom = "0";
-    }
+    modWheelRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    modWheelRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    modWheelRenderer.setSize(W, H, false);
 
-    // Grip position (centered at 0, extends ±127)
-    const gripPos = centerPos + (modValue / 127) * centerPos;
-    modGrip.style.bottom = `${Math.max(0, Math.min(trackH - gripH, gripPos))}px`;
-    modValEl.textContent = modValue;
+    modWheelScene  = new THREE.Scene();
+    modWheelCamera = new THREE.PerspectiveCamera(40, W / H, 0.1, 100);
+    modWheelCamera.position.set(0.5, 0.3, 3.0);
+    modWheelCamera.lookAt(0, 0, 0);
+
+    modWheelScene.add(new THREE.AmbientLight(0xffffff, 0.55));
+    const key = new THREE.DirectionalLight(0xffffff, 1.1);
+    key.position.set(1, 2, 3);
+    modWheelScene.add(key);
+    const rim2 = new THREE.DirectionalLight(0x4488ff, 0.35);
+    rim2.position.set(-2, -1, -2);
+    modWheelScene.add(rim2);
+
+    modWheelSpinner = new THREE.Group();
+    modWheelScene.add(modWheelSpinner);
+
+    // Wheel body — cylinder with axis along X (rotateZ π/2 bakes the orientation)
+    const bodyGeo = new THREE.CylinderGeometry(0.55, 0.55, 0.32, 20);
+    bodyGeo.rotateZ(Math.PI / 2);
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x1c1c1c, roughness: 0.6, metalness: 0.3 });
+    modWheelSpinner.add(new THREE.Mesh(bodyGeo, bodyMat));
+
+    // Grip ridges along the wheel width
+    const ridgeMat = new THREE.MeshStandardMaterial({ color: 0x303030, roughness: 0.9, metalness: 0.05 });
+    [-0.10, -0.03, 0.04, 0.11].forEach(x => {
+        const rGeo = new THREE.CylinderGeometry(0.585, 0.585, 0.028, 20);
+        rGeo.rotateZ(Math.PI / 2);
+        const r = new THREE.Mesh(rGeo, ridgeMat);
+        r.position.x = x;
+        modWheelSpinner.add(r);
+    });
+
+    // Finger tab — protruding pad on the rim for push/pull
+    const tabCol = parseCssColorToHex("--knob-dot");
+    modWheelTabMat = new THREE.MeshStandardMaterial({
+        color: tabCol, emissive: tabCol, emissiveIntensity: 0.35,
+        roughness: 0.45, metalness: 0.15,
+    });
+    const tabGeo = new THREE.BoxGeometry(0.29, 0.13, 0.15);
+    const tab = new THREE.Mesh(tabGeo, modWheelTabMat);
+    tab.position.y = 0.62;
+    modWheelSpinner.add(tab);
+
+    // Thin accent line on the tab face
+    const lineGeo = new THREE.BoxGeometry(0.29, 0.018, 0.018);
+    const lineMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.9 });
+    const line = new THREE.Mesh(lineGeo, lineMat);
+    line.position.set(0, 0.62, 0.083);
+    modWheelSpinner.add(line);
+
+    renderModWheel3D();
+
+    canvas.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        const startY   = e.clientY;
+        const startVal = modValue;
+        function onMove(ev) {
+            const dy = startY - ev.clientY;
+            modValue = Math.max(-127, Math.min(127, startVal + Math.round(dy * 127 / 35)));
+            renderModWheel3D();
+            const midiValue = Math.round((modValue + 127) / 2);
+            if (connected) invoke("send_cc", { channel, cc: 1, value: midiValue }).catch(() => {});
+        }
+        function onUp() {
+            document.removeEventListener("mousemove", onMove);
+            document.removeEventListener("mouseup",   onUp);
+        }
+        document.addEventListener("mousemove", onMove);
+        document.addEventListener("mouseup",   onUp);
+    });
 }
 
-modTrack.addEventListener("mousedown", (e) => {
-    e.preventDefault();
-    const startY = e.clientY;
-    const startVal = modValue;
-
-    function onMove(ev) {
-        const dy = startY - ev.clientY; // drag up = positive
-        modValue = Math.max(-127, Math.min(127, startVal + Math.round(dy * 127 / 35)));
-        updateModWheel();
-        // Map ±127 to MIDI 0-127 for CC
-        const midiValue = Math.round((modValue + 127) / 2);
-        if (connected) invoke("send_cc", { channel, cc: 1, value: midiValue }).catch(() => { });
-    }
-    function onUp() {
-        document.removeEventListener("mousemove", onMove);
-        document.removeEventListener("mouseup", onUp);
-    }
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
-});
+function renderModWheel3D() {
+    if (!modWheelRenderer) return;
+    modWheelSpinner.rotation.x = -(modValue / 127) * (Math.PI * 0.65);
+    modWheelRenderer.render(modWheelScene, modWheelCamera);
+    modValEl.textContent = modValue;
+}
 
 // ── Draggable LCD controls ────────────────────────────────────────────────────
 const velDisplay  = document.getElementById("vel-display");
@@ -717,7 +759,7 @@ window.addEventListener("keyup", (e) => {
 window.addEventListener("wheel", (e) => {
     e.preventDefault();
     modValue = Math.max(-127, Math.min(127, modValue - Math.sign(e.deltaY) * 18));
-    updateModWheel();
+    renderModWheel3D();
     const midiValue = Math.round((modValue + 127) / 2);
     if (connected) invoke("send_cc", { channel, cc: 1, value: midiValue }).catch(() => { });
 }, { passive: false });
@@ -728,7 +770,7 @@ window.addEventListener("auxclick", (e) => {
     e.preventDefault();
     e.stopPropagation();
     modValue = 0;
-    updateModWheel();
+    renderModWheel3D();
     if (connected) invoke("send_cc", { channel, cc: 1, value: 64 }).catch(() => { });
 });
 
@@ -737,7 +779,7 @@ window.addEventListener("blur", () => {
     if (connected) {
         invoke("send_cc", { channel, cc: 64, value: 0 }).catch(() => { });
         modValue = 0;
-        updateModWheel();
+        renderModWheel3D();
         invoke("send_cc", { channel, cc: 1, value: 0 }).catch(() => { });
     }
     for (const key of heldKeys) {
@@ -1030,7 +1072,7 @@ appTitle.textContent = GM_PATCH_NAMES[patch];
 updateZoomDisplay();
 initKeyboard3D();
 setThemeLighting(localStorage.getItem("theme") || "default");
-updateModWheel();
+initModWheel3D();
 
 appWindow.innerSize().then(s => appWindow.scaleFactor().then(sf => {
     prevLogW = s.width / sf;
@@ -1039,5 +1081,5 @@ appWindow.innerSize().then(s => appWindow.scaleFactor().then(sf => {
 
 new ResizeObserver(() => {
     resizeKeyboard3D();
-    updateModWheel();
+    renderModWheel3D();
 }).observe(keyboardContainer);
