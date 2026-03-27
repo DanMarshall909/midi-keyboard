@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import * as THREE from "three";
+import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 
 // ── Key → MIDI note mapping (GarageBand layout) ──────────────────────────────
 const KEY_MAP = {
@@ -356,7 +357,7 @@ function buildKeys3D() {
     const startX = -totalW / 2 + (WKW + KEY_GAP) / 2;
 
     // White keys — shared geometry, shared material
-    const whiteGeo = new THREE.BoxGeometry(WKW, WKH, WKD);
+    const whiteGeo = new RoundedBoxGeometry(WKW, WKH, WKD, 3, 0.055);
     for (let oct = 0; oct < totalOctaves; oct++) {
         for (let i = 0; i < WHITE_OFFSETS.length; i++) {
             const midi = (baseOctave + oct) * 12 + 12 + WHITE_OFFSETS[i];
@@ -373,7 +374,7 @@ function buildKeys3D() {
     }
 
     // Black keys — shared geometry, shared material
-    const blackGeo = new THREE.BoxGeometry(BKW, BKH, BKD);
+    const blackGeo = new RoundedBoxGeometry(BKW, BKH, BKD, 3, 0.055);
     const blackY = (WKH + BKH) / 2;
     const blackZ = -(WKD - BKD) / 2;
     for (let oct = 0; oct < totalOctaves; oct++) {
@@ -506,16 +507,102 @@ modTrack.addEventListener("mousedown", (e) => {
 });
 
 // ── Draggable LCD controls ────────────────────────────────────────────────────
-let panValue  = 64;
-let exprValue = 127;
-let revValue  = 0;
-let choValue  = 0;
-
 const velDisplay  = document.getElementById("vel-display");
 const panDisplay  = document.getElementById("pan-display");
 const exprDisplay = document.getElementById("expr-display");
 const revDisplay  = document.getElementById("rev-display");
 const choDisplay  = document.getElementById("cho-display");
+
+// ── Knob rotation helper ───────────────────────────────────────────────────────
+function knobRotation(value, min, max) {
+    return -135 + ((value - min) / (max - min)) * 270;
+}
+
+// ── 3D Knob rendering ─────────────────────────────────────────────────────────
+const knob3DMap = new WeakMap();
+const allKnob3DData = [];
+
+function parseCssColorToHex(varName) {
+    const str = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+    const m = str.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+    if (m) return (parseInt(m[1]) << 16) | (parseInt(m[2]) << 8) | parseInt(m[3]);
+    const h = str.replace(/^#/, '');
+    if (h.length === 6) return parseInt(h, 16);
+    if (h.length === 3) return parseInt(h[0] + h[0] + h[1] + h[1] + h[2] + h[2], 16);
+    return 0x7ab4ff;
+}
+
+function refreshKnob3DColors() {
+    const col = parseCssColorToHex('--knob-dot');
+    for (const data of allKnob3DData) {
+        data.pipMat.color.setHex(col);
+        data.pipMat.emissive.setHex(col);
+        data.pipMat.needsUpdate = true;
+        data.renderer.render(data.scene, data.camera);
+    }
+}
+
+function initKnob3D(canvasEl) {
+    const CSS_SIZE = 36;
+    canvasEl.style.width = CSS_SIZE + 'px';
+    canvasEl.style.height = CSS_SIZE + 'px';
+
+    const renderer = new THREE.WebGLRenderer({ canvas: canvasEl, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(CSS_SIZE, CSS_SIZE);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 100);
+    camera.position.set(0, 4.2, 1.5);
+    camera.lookAt(0, 0, 0);
+
+    const ambient = new THREE.AmbientLight(0xffffff, 0.50);
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.1);
+    keyLight.position.set(2, 4, 2);
+    const rimLight = new THREE.DirectionalLight(0x4466cc, 0.35);
+    rimLight.position.set(-1.5, 2, -2);
+    scene.add(ambient, keyLight, rimLight);
+
+    const bodyGeo = new THREE.CylinderGeometry(0.60, 0.70, 0.28, 32);
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x282828, roughness: 0.28, metalness: 0.65 });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    scene.add(body);
+
+    const capGeo = new THREE.CylinderGeometry(0.59, 0.60, 0.025, 32);
+    const capMat = new THREE.MeshStandardMaterial({ color: 0x3c3c3c, roughness: 0.18, metalness: 0.75 });
+    const cap = new THREE.Mesh(capGeo, capMat);
+    cap.position.y = 0.15;
+    scene.add(cap);
+
+    const pipGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.055, 10);
+    const pipCol = parseCssColorToHex('--knob-dot');
+    const pipMat = new THREE.MeshStandardMaterial({
+        color: pipCol, emissive: pipCol, emissiveIntensity: 0.55,
+        roughness: 0.1, metalness: 0.1,
+    });
+    const pip = new THREE.Mesh(pipGeo, pipMat);
+    pip.position.set(0, 0.19, -0.38);
+    body.add(pip);
+
+    const data = { renderer, scene, camera, body, pipMat };
+    knob3DMap.set(canvasEl, data);
+    allKnob3DData.push(data);
+    return data;
+}
+
+function setKnob3DAngle(knobEl, value) {
+    const data = knob3DMap.get(knobEl);
+    if (!data) return;
+    const min = parseInt(knobEl.dataset.min);
+    const max = parseInt(knobEl.dataset.max);
+    data.body.rotation.y = -knobRotation(value, min, max) * Math.PI / 180;
+    data.renderer.render(data.scene, data.camera);
+}
+
+function initKnob(knobEl) {
+    initKnob3D(knobEl);
+    setKnob3DAngle(knobEl, parseInt(knobEl.dataset.value));
+}
 
 function makeDraggableLCD(el, min, max, get, set, pxPerUnit = 1) {
     el.addEventListener("mousedown", (e) => {
@@ -535,13 +622,47 @@ function makeDraggableLCD(el, min, max, get, set, pxPerUnit = 1) {
     });
 }
 
-makeDraggableLCD(octaveDisplay, 0, 8,   () => baseOctave, (v) => { baseOctave = v; buildKeys3D(); }, 12);
-const PX_PER_UNIT = 35 / 127;
-makeDraggableLCD(velDisplay,    1, 127, () => velocity,   (v) => { velocity = v; }, PX_PER_UNIT);
-makeDraggableLCD(panDisplay,    0, 127, () => panValue,   (v) => { panValue  = v; if (connected) invoke("send_cc", { channel, cc: 10, value: v }).catch(() => {}); }, PX_PER_UNIT);
-makeDraggableLCD(exprDisplay,   0, 127, () => exprValue,  (v) => { exprValue = v; if (connected) invoke("send_cc", { channel, cc: 11, value: v }).catch(() => {}); }, PX_PER_UNIT);
-makeDraggableLCD(revDisplay,    0, 127, () => revValue,   (v) => { revValue  = v; if (connected) invoke("send_cc", { channel, cc: 91, value: v }).catch(() => {}); }, PX_PER_UNIT);
-makeDraggableLCD(choDisplay,    0, 127, () => choValue,   (v) => { choValue  = v; if (connected) invoke("send_cc", { channel, cc: 93, value: v }).catch(() => {}); }, PX_PER_UNIT);
+makeDraggableLCD(octaveDisplay, 0, 8, () => baseOctave, (v) => { baseOctave = v; buildKeys3D(); }, 12);
+
+// ── 3D knob drag ──────────────────────────────────────────────────────────────
+function makeKnob3DDraggable(knobEl, valEl, lcdEl, onChange) {
+    const min = parseInt(knobEl.dataset.min);
+    const max = parseInt(knobEl.dataset.max);
+    knobEl.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        const startY   = e.clientY;
+        const startVal = parseInt(knobEl.dataset.value);
+        function onMove(ev) {
+            const newVal = Math.max(min, Math.min(max, Math.round(startVal + (startY - ev.clientY) * (max - min) / 100)));
+            if (newVal === parseInt(knobEl.dataset.value)) return;
+            knobEl.dataset.value = newVal;
+            setKnob3DAngle(knobEl, newVal);
+            valEl.textContent = newVal;
+            if (lcdEl) lcdEl.textContent = newVal;
+            onChange(newVal);
+        }
+        function onUp() {
+            document.removeEventListener("mousemove", onMove);
+            document.removeEventListener("mouseup",   onUp);
+        }
+        document.addEventListener("mousemove", onMove);
+        document.addEventListener("mouseup",   onUp);
+    });
+}
+
+const knobVel  = document.getElementById("knob-vel");
+const knobPan  = document.getElementById("knob-pan");
+const knobExpr = document.getElementById("knob-expr");
+const knobRev  = document.getElementById("knob-rev");
+const knobCho  = document.getElementById("knob-cho");
+
+initKnob(knobVel);  initKnob(knobPan);  initKnob(knobExpr);  initKnob(knobRev);  initKnob(knobCho);
+
+makeKnob3DDraggable(knobVel,  document.getElementById("knob-vel-val"),  velDisplay,  (v) => { velocity  = v; });
+makeKnob3DDraggable(knobPan,  document.getElementById("knob-pan-val"),  panDisplay,  (v) => { if (connected) invoke("send_cc", { channel, cc: 10, value: v }).catch(() => {}); });
+makeKnob3DDraggable(knobExpr, document.getElementById("knob-expr-val"), exprDisplay, (v) => { if (connected) invoke("send_cc", { channel, cc: 11, value: v }).catch(() => {}); });
+makeKnob3DDraggable(knobRev,  document.getElementById("knob-rev-val"),  revDisplay,  (v) => { if (connected) invoke("send_cc", { channel, cc: 91, value: v }).catch(() => {}); });
+makeKnob3DDraggable(knobCho,  document.getElementById("knob-cho-val"),  choDisplay,  (v) => { if (connected) invoke("send_cc", { channel, cc: 93, value: v }).catch(() => {}); });
 
 // ── Keyboard events ───────────────────────────────────────────────────────────
 window.addEventListener("keydown", (e) => {
@@ -846,6 +967,7 @@ function applyTheme(name) {
     swatches.forEach(s => s.classList.toggle("active", s.dataset.theme === name));
     localStorage.setItem("theme", name);
     setThemeLighting(name);
+    refreshKnob3DColors();
 }
 
 swatches.forEach(s => s.addEventListener("click", () => {
