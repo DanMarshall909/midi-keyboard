@@ -34,67 +34,57 @@
       <!-- ── Body: sidebar + main ── -->
       <div class="flex flex-1 min-h-0">
 
-        <!-- Left sidebar: OCT + MOD -->
-        <div id="sidebar" class="flex flex-col items-center shrink-0 w-[64px] py-2 gap-2"
+        <!-- Left sidebar: Oct + [Mod | pots] -->
+        <div id="sidebar" class="flex flex-col shrink-0 w-[108px] py-2 gap-1"
              style="background:var(--bg-sidebar); border-right:1px solid var(--border-sub)">
 
-          <!-- OCT -->
-          <div class="flex flex-col items-center gap-1">
-            <span class="text-[9px] uppercase tracking-wider" style="color:var(--text-muted)">Oct</span>
-            <button id="oct-up"
-                    class="w-[20px] h-[20px] p-0 flex items-center justify-center text-[11px]">+</button>
-            <span id="octave-display">4</span>
-            <button id="oct-down"
-                    class="w-[20px] h-[20px] p-0 flex items-center justify-center text-[11px]">−</button>
-          </div>
+          <!-- MOD + pots side by side -->
+          <div class="flex flex-1 min-h-0 gap-1 px-2 py-1">
 
-          <!-- divider -->
-          <div class="w-full" style="border-top:1px solid var(--border-sub)"></div>
-
-          <!-- MOD -->
-          <div class="flex flex-col items-center gap-1 flex-1 min-h-0 w-full pb-1">
-            <span class="text-[9px] uppercase tracking-wider" style="color:var(--text-muted)">Mod</span>
-            <div id="mod-track" class="flex-1 min-h-0">
-              <div id="mod-fill"></div>
-              <div id="mod-grip"></div>
+            <!-- pots strip -->
+            <div class="flex flex-col justify-between flex-1 min-h-0">
+              <div class="flex items-center gap-1.5">
+                <span id="octave-display" style="cursor:ns-resize; min-width:30px">4</span>
+                <span class="text-[8px] uppercase tracking-wider" style="color:var(--text-muted)">Oct</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span id="vel-display" class="lcd-val" style="cursor:ns-resize; min-width:30px">100</span>
+                <span class="text-[8px] uppercase tracking-wider" style="color:var(--text-muted)">Vel</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span id="pan-display" class="lcd-val" style="cursor:ns-resize; min-width:30px">64</span>
+                <span class="text-[8px] uppercase tracking-wider" style="color:var(--text-muted)">Pan</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span id="expr-display" class="lcd-val" style="cursor:ns-resize; min-width:30px">127</span>
+                <span class="text-[8px] uppercase tracking-wider" style="color:var(--text-muted)">Expr</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span id="rev-display" class="lcd-val" style="cursor:ns-resize; min-width:30px">0</span>
+                <span class="text-[8px] uppercase tracking-wider" style="color:var(--text-muted)">Rev</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span id="cho-display" class="lcd-val" style="cursor:ns-resize; min-width:30px">0</span>
+                <span class="text-[8px] uppercase tracking-wider" style="color:var(--text-muted)">Cho</span>
+              </div>
             </div>
-            <span class="text-[10px]" id="mod-val" style="color:var(--text-muted)">0</span>
+
+            <!-- MOD wheel -->
+            <div class="flex flex-col items-center gap-1 shrink-0">
+              <span class="text-[8px] uppercase tracking-wider" style="color:var(--text-muted)">Mod</span>
+              <div id="mod-track" class="flex-1 min-h-0">
+                <div id="mod-fill"></div>
+                <div id="mod-grip"></div>
+              </div>
+              <span id="mod-val" class="lcd-val">0</span>
+            </div>
+
           </div>
 
         </div>
 
         <!-- Right: knobs row + keyboard -->
         <div class="flex flex-col flex-1 min-w-0 min-h-0">
-
-          <!-- Knobs row -->
-          <div id="knobs-row" class="flex items-center justify-center gap-6 px-4 py-1 shrink-0"
-               style="background:var(--bg-bar); border-bottom:1px solid var(--border-sub)">
-            <div class="flex flex-col items-center gap-1">
-              <span class="text-[9px] uppercase tracking-wider" style="color:var(--text-muted)">Vel</span>
-              <div class="knob" id="knob-vel" data-value="100" data-min="1" data-max="127"></div>
-              <span class="text-[10px]" id="knob-vel-val" style="color:var(--text-muted)">100</span>
-            </div>
-            <div class="flex flex-col items-center gap-1">
-              <span class="text-[9px] uppercase tracking-wider" style="color:var(--text-muted)">Pan</span>
-              <div class="knob" id="knob-pan" data-cc="10" data-value="64" data-min="0" data-max="127"></div>
-              <span class="text-[10px]" id="knob-pan-val" style="color:var(--text-muted)">64</span>
-            </div>
-            <div class="flex flex-col items-center gap-1">
-              <span class="text-[9px] uppercase tracking-wider" style="color:var(--text-muted)">Expr</span>
-              <div class="knob" id="knob-expr" data-cc="11" data-value="127" data-min="0" data-max="127"></div>
-              <span class="text-[10px]" id="knob-expr-val" style="color:var(--text-muted)">127</span>
-            </div>
-            <div class="flex flex-col items-center gap-1">
-              <span class="text-[9px] uppercase tracking-wider" style="color:var(--text-muted)">Rev</span>
-              <div class="knob" id="knob-rev" data-cc="91" data-value="0" data-min="0" data-max="127"></div>
-              <span class="text-[10px]" id="knob-rev-val" style="color:var(--text-muted)">0</span>
-            </div>
-            <div class="flex flex-col items-center gap-1">
-              <span class="text-[9px] uppercase tracking-wider" style="color:var(--text-muted)">Cho</span>
-              <div class="knob" id="knob-cho" data-cc="93" data-value="0" data-min="0" data-max="127"></div>
-              <span class="text-[10px]" id="knob-cho-val" style="color:var(--text-muted)">0</span>
-            </div>
-          </div>
 
           <!-- Keyboard -->
           <div id="keyboard-area" class="flex-1 min-h-0 flex flex-col">
@@ -133,17 +123,17 @@
 
       <!-- ── Config overlay ── -->
       <div id="config-overlay" class="hidden">
-        <div class="rounded-lg p-5 max-w-[300px] w-[90%]"
+        <div class="rounded-lg p-3 max-w-[300px] w-[90%]"
              style="background:var(--bg-modal); border:1px solid var(--border-modal)">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="text-[13px] font-semibold tracking-wide" style="color:var(--text-heading)">Settings</h3>
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-[11px] font-semibold tracking-wide" style="color:var(--text-heading)">Settings</h3>
             <button id="config-close"
                     class="w-5 h-5 p-0 flex items-center justify-center rounded-full text-[10px]"
                     style="background:transparent; border-color:transparent; color:var(--text-dim)">✕</button>
           </div>
-          <div class="flex flex-col gap-3">
+          <div class="flex flex-col gap-2">
 
-            <div class="flex flex-col gap-1">
+            <div class="flex flex-col gap-0.5">
               <label class="text-[9px] uppercase tracking-wider" style="color:var(--text-muted)">MIDI Port</label>
               <div class="flex gap-1 items-center">
                 <select id="port-select" class="flex-1"><option value="">-- Port --</option></select>
@@ -153,12 +143,12 @@
               <div id="status" class="text-[10px] min-h-[13px]" style="color:var(--text-muted)"></div>
             </div>
 
-            <div class="flex flex-col gap-1">
+            <div class="flex flex-col gap-0.5">
               <label class="text-[9px] uppercase tracking-wider" style="color:var(--text-muted)">↑↓ Arrow CC</label>
               <select id="arrow-cc-select"></select>
             </div>
 
-            <div class="flex flex-col gap-1">
+            <div class="flex flex-col gap-0.5">
               <label class="text-[9px] uppercase tracking-wider" style="color:var(--text-muted)">Theme</label>
               <div class="flex gap-2 items-center">
                 <div class="theme-swatch active" data-theme="default"   title="Default"></div>
@@ -170,7 +160,7 @@
               </div>
             </div>
 
-            <div class="flex flex-col gap-1">
+            <div class="flex flex-col gap-0.5">
               <label class="text-[9px] uppercase tracking-wider" style="color:var(--text-muted)">Zoom</label>
               <div class="flex items-center gap-2">
                 <button id="zoom-out" class="min-w-[32px]">−</button>

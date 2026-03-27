@@ -1,215 +1,108 @@
 @import "tailwindcss";
 
 /* ── Theme variables ─────────────────────────────────────────────────────────*/
+/* Each theme sets 5 parameters; every colour is derived from them below.     */
 :root {
-  /* Default: Dark blue */
-  --bg-app:         rgba(14, 14, 24, 0.92);
-  --bg-titlebar:    rgba(8, 8, 18, 0.5);
-  --bg-sidebar:     rgba(6, 6, 16, 0.6);
-  --bg-bar:         rgba(8, 8, 20, 0.6);
-  --bg-overlay:     rgba(0, 0, 0, 0.72);
-  --bg-modal:       rgba(12, 12, 28, 0.98);
-  --border-app:     rgba(255, 255, 255, 0.07);
-  --border-sub:     rgba(255, 255, 255, 0.05);
-  --border-ctrl:    rgba(255, 255, 255, 0.12);
-  --border-modal:   rgba(255, 255, 255, 0.12);
-  --ctrl-bg:        rgba(255, 255, 255, 0.07);
-  --ctrl-hover:     rgba(255, 255, 255, 0.15);
-  --text:           #e0e0e0;
-  --text-dim:       #666;
-  --text-muted:     #555;
-  --text-heading:   #ccc;
-  --accent:         #4da6ff;
-  --accent-bg:      rgba(10, 40, 80, 0.4);
-  --accent-bg2:     rgba(0, 20, 60, 0.6);
-  --accent-bg3:     rgba(5, 15, 35, 0.9);
-  --accent-border:  rgba(77, 166, 255, 0.3);
-  --accent-blight:  rgba(77, 166, 255, 0.2);
-  --accent-glow:    rgba(77, 166, 255, 0.15);
-  --accent-shadow:  rgba(77, 166, 255, 0.4);
-  --knob-dot:       rgba(120, 200, 255, 0.95);
-  --knob-ring:      rgba(100, 180, 255, 0.3);
-  --mod-bg:         rgba(0, 0, 0, 0.45);
-  --mod-border:     rgba(255, 255, 255, 0.1);
-  --mod-grip-t:     #5a5a5a;
-  --mod-grip-b:     #323232;
-  --mod-grip-bdr:   rgba(255, 255, 255, 0.22);
-  --key-active-txt: #1a3a5a;
-  --key-black-active-txt: #aad4ff;
-  --hk-color:       #7ab4ff;
+  --hue:    210;    /* accent hue, 0–360                         */
+  --sat:   100%;    /* accent & UI element saturation            */
+  --acc-l:  65%;    /* accent lightness                          */
+  --bg-s:   30%;    /* background tint saturation                */
+  --bg-l:    8%;    /* background base lightness                 */
+
+  /* backgrounds */
+  --bg-app:      hsl(var(--hue) var(--bg-s) var(--bg-l) / 0.92);
+  --bg-titlebar: hsl(var(--hue) var(--bg-s) calc(var(--bg-l) * 0.5)  / 0.5);
+  --bg-sidebar:  hsl(var(--hue) var(--bg-s) calc(var(--bg-l) * 0.4)  / 0.6);
+  --bg-bar:      hsl(var(--hue) var(--bg-s) calc(var(--bg-l) * 0.55) / 0.6);
+  --bg-overlay:  hsl(0 0% 0% / 0.72);
+  --bg-modal:    hsl(var(--hue) var(--bg-s) calc(var(--bg-l) * 0.85) / 0.98);
+
+  /* borders */
+  --border-app:   hsl(var(--hue) var(--sat) 70% / 0.07);
+  --border-sub:   hsl(var(--hue) var(--sat) 70% / 0.05);
+  --border-ctrl:  hsl(var(--hue) var(--sat) 70% / 0.12);
+  --border-modal: hsl(var(--hue) var(--sat) 70% / 0.12);
+
+  /* controls */
+  --ctrl-bg:    hsl(var(--hue) var(--sat) 70% / 0.07);
+  --ctrl-hover: hsl(var(--hue) var(--sat) 70% / 0.15);
+
+  /* text */
+  --text:         #e0e0e0;
+  --text-dim:     hsl(var(--hue) 20% 40%);
+  --text-muted:   hsl(var(--hue) 20% 33%);
+  --text-heading: hsl(var(--hue) calc(var(--sat) * 0.7) 80%);
+
+  /* accent */
+  --accent:        hsl(var(--hue) var(--sat) var(--acc-l));
+  --accent-bg:     hsl(var(--hue) var(--sat) calc(var(--acc-l) * 0.23) / 0.4);
+  --accent-bg2:    hsl(var(--hue) var(--sat) calc(var(--acc-l) * 0.16) / 0.6);
+  --accent-bg3:    hsl(var(--hue) var(--sat) calc(var(--acc-l) * 0.08) / 0.9);
+  --accent-border: hsl(var(--hue) var(--sat) var(--acc-l) / 0.3);
+  --accent-blight: hsl(var(--hue) var(--sat) var(--acc-l) / 0.2);
+  --accent-glow:   hsl(var(--hue) var(--sat) var(--acc-l) / 0.15);
+  --accent-shadow: hsl(var(--hue) var(--sat) var(--acc-l) / 0.4);
+
+  /* knob */
+  --knob-dot:  hsl(var(--hue) 70% 85% / 0.95);
+  --knob-ring: hsl(var(--hue) var(--sat) 70% / 0.3);
+
+  /* mod wheel */
+  --mod-bg:       hsl(var(--hue) calc(var(--bg-s) * 0.5) calc(var(--bg-l) * 0.6) / 0.5);
+  --mod-border:   hsl(var(--hue) var(--sat) 70% / 0.1);
+  --mod-grip-t:   hsl(var(--hue) calc(var(--bg-s) * 0.6) 35%);
+  --mod-grip-b:   hsl(var(--hue) calc(var(--bg-s) * 0.6) 20%);
+  --mod-grip-bdr: hsl(var(--hue) var(--sat) 70% / 0.22);
+
+  /* keys */
+  --key-active-txt:       hsl(var(--hue) calc(var(--sat) * 0.55) 22%);
+  --key-black-active-txt: hsl(var(--hue) var(--sat) var(--acc-l));
+  --hk-color:             hsl(var(--hue) var(--sat) 73%);
 }
 
 :root[data-theme="midnight"] {
-  --bg-app:         rgba(5, 5, 8, 0.97);
-  --bg-titlebar:    rgba(0, 0, 0, 0.7);
-  --bg-sidebar:     rgba(0, 0, 0, 0.5);
-  --bg-bar:         rgba(0, 0, 0, 0.5);
-  --bg-modal:       rgba(8, 8, 10, 0.99);
-  --border-app:     rgba(255, 255, 255, 0.05);
-  --border-sub:     rgba(255, 255, 255, 0.04);
-  --border-ctrl:    rgba(255, 255, 255, 0.08);
-  --border-modal:   rgba(255, 255, 255, 0.08);
-  --ctrl-bg:        rgba(255, 255, 255, 0.05);
-  --ctrl-hover:     rgba(255, 255, 255, 0.10);
-  --text-dim:       #555;
-  --text-muted:     #444;
-  --text-heading:   #aaa;
-  --accent:         #aaaaaa;
-  --accent-bg:      rgba(50, 50, 50, 0.3);
-  --accent-bg2:     rgba(30, 30, 30, 0.5);
-  --accent-bg3:     rgba(10, 10, 10, 0.9);
-  --accent-border:  rgba(150, 150, 150, 0.3);
-  --accent-blight:  rgba(150, 150, 150, 0.2);
-  --accent-glow:    rgba(150, 150, 150, 0.1);
-  --accent-shadow:  rgba(150, 150, 150, 0.3);
-  --knob-dot:       rgba(180, 180, 180, 0.9);
-  --knob-ring:      rgba(150, 150, 150, 0.25);
-  --mod-border:     rgba(255, 255, 255, 0.07);
-  --mod-grip-bdr:   rgba(255, 255, 255, 0.15);
-  --key-active-txt: #333;
-  --key-black-active-txt: #aaaaaa;
-  --hk-color:       #999;
+  --hue:    210;
+  --sat:      0%;
+  --acc-l:   67%;
+  --bg-s:     0%;
+  --bg-l:   2.5%;
 }
 
 :root[data-theme="synthwave"] {
-  --bg-app:         rgba(12, 5, 20, 0.95);
-  --bg-titlebar:    rgba(8, 2, 16, 0.7);
-  --bg-sidebar:     rgba(6, 1, 12, 0.7);
-  --bg-bar:         rgba(10, 3, 18, 0.7);
-  --bg-modal:       rgba(10, 5, 20, 0.99);
-  --border-app:     rgba(180, 0, 255, 0.15);
-  --border-sub:     rgba(180, 0, 255, 0.08);
-  --border-ctrl:    rgba(180, 0, 255, 0.2);
-  --border-modal:   rgba(180, 0, 255, 0.2);
-  --ctrl-bg:        rgba(180, 0, 255, 0.08);
-  --ctrl-hover:     rgba(180, 0, 255, 0.18);
-  --text-dim:       #8855aa;
-  --text-muted:     #6644aa;
-  --text-heading:   #dd88ff;
-  --accent:         #e040fb;
-  --accent-bg:      rgba(80, 0, 120, 0.35);
-  --accent-bg2:     rgba(50, 0, 80, 0.55);
-  --accent-bg3:     rgba(20, 0, 40, 0.9);
-  --accent-border:  rgba(224, 64, 251, 0.35);
-  --accent-blight:  rgba(224, 64, 251, 0.2);
-  --accent-glow:    rgba(224, 64, 251, 0.2);
-  --accent-shadow:  rgba(224, 64, 251, 0.5);
-  --knob-dot:       rgba(255, 100, 255, 0.95);
-  --knob-ring:      rgba(224, 64, 251, 0.35);
-  --mod-bg:         rgba(40, 0, 60, 0.5);
-  --mod-border:     rgba(180, 0, 255, 0.2);
-  --mod-grip-t:     #6a2a8a;
-  --mod-grip-b:     #3a1050;
-  --mod-grip-bdr:   rgba(224, 64, 251, 0.3);
-  --key-active-txt: #5a1a7a;
-  --key-black-active-txt: #e040fb;
-  --hk-color:       #e040fb;
+  --hue:    292;
+  --sat:     95%;
+  --acc-l:   61%;
+  --bg-s:    55%;
+  --bg-l:     5%;
 }
 
 :root[data-theme="ember"] {
-  --bg-app:         rgba(18, 10, 4, 0.95);
-  --bg-titlebar:    rgba(10, 5, 0, 0.6);
-  --bg-sidebar:     rgba(8, 4, 0, 0.65);
-  --bg-bar:         rgba(12, 6, 0, 0.65);
-  --bg-modal:       rgba(15, 8, 2, 0.99);
-  --border-app:     rgba(255, 150, 30, 0.1);
-  --border-sub:     rgba(255, 150, 30, 0.06);
-  --border-ctrl:    rgba(255, 150, 30, 0.15);
-  --border-modal:   rgba(255, 150, 30, 0.15);
-  --ctrl-bg:        rgba(255, 150, 30, 0.07);
-  --ctrl-hover:     rgba(255, 150, 30, 0.15);
-  --text-dim:       #775533;
-  --text-muted:     #664422;
-  --text-heading:   #cc9966;
-  --accent:         #ffb300;
-  --accent-bg:      rgba(80, 40, 0, 0.4);
-  --accent-bg2:     rgba(50, 20, 0, 0.6);
-  --accent-bg3:     rgba(25, 8, 0, 0.9);
-  --accent-border:  rgba(255, 179, 0, 0.35);
-  --accent-blight:  rgba(255, 179, 0, 0.2);
-  --accent-glow:    rgba(255, 179, 0, 0.15);
-  --accent-shadow:  rgba(255, 179, 0, 0.4);
-  --knob-dot:       rgba(255, 200, 50, 0.95);
-  --knob-ring:      rgba(255, 179, 0, 0.3);
-  --mod-bg:         rgba(40, 15, 0, 0.5);
-  --mod-border:     rgba(255, 150, 30, 0.15);
-  --mod-grip-t:     #7a4a1a;
-  --mod-grip-b:     #3a1800;
-  --mod-grip-bdr:   rgba(255, 179, 0, 0.3);
-  --key-active-txt: #5a2a00;
-  --key-black-active-txt: #ffb300;
-  --hk-color:       #ffb300;
+  --hue:     42;
+  --sat:    100%;
+  --acc-l:   50%;
+  --bg-s:    60%;
+  --bg-l:   5.5%;
 }
 
 :root[data-theme="matrix"] {
-  --bg-app:         rgba(0, 8, 0, 0.97);
-  --bg-titlebar:    rgba(0, 5, 0, 0.7);
-  --bg-sidebar:     rgba(0, 4, 0, 0.7);
-  --bg-bar:         rgba(0, 6, 0, 0.7);
-  --bg-modal:       rgba(0, 6, 0, 0.99);
-  --border-app:     rgba(0, 255, 70, 0.1);
-  --border-sub:     rgba(0, 255, 70, 0.05);
-  --border-ctrl:    rgba(0, 255, 70, 0.15);
-  --border-modal:   rgba(0, 255, 70, 0.15);
-  --ctrl-bg:        rgba(0, 255, 70, 0.06);
-  --ctrl-hover:     rgba(0, 255, 70, 0.13);
-  --text:           #00cc44;
-  --text-dim:       #005522;
-  --text-muted:     #004418;
-  --text-heading:   #00ff46;
-  --accent:         #00ff46;
-  --accent-bg:      rgba(0, 60, 10, 0.4);
-  --accent-bg2:     rgba(0, 40, 5, 0.6);
-  --accent-bg3:     rgba(0, 15, 0, 0.9);
-  --accent-border:  rgba(0, 255, 70, 0.35);
-  --accent-blight:  rgba(0, 255, 70, 0.2);
-  --accent-glow:    rgba(0, 255, 70, 0.15);
-  --accent-shadow:  rgba(0, 255, 70, 0.4);
-  --knob-dot:       rgba(0, 255, 100, 0.95);
-  --knob-ring:      rgba(0, 255, 70, 0.3);
-  --mod-bg:         rgba(0, 30, 0, 0.5);
-  --mod-border:     rgba(0, 255, 70, 0.12);
-  --mod-grip-t:     #0a4a1a;
-  --mod-grip-b:     #001a05;
-  --mod-grip-bdr:   rgba(0, 255, 70, 0.25);
-  --key-active-txt: #002200;
-  --key-black-active-txt: #00ff46;
-  --hk-color:       #00ff46;
+  --hue:    134;
+  --sat:    100%;
+  --acc-l:   50%;
+  --bg-s:   100%;
+  --bg-l:     3%;
+  /* matrix uses fully-saturated green across all text roles */
+  --text:         hsl(134 100% 40%);
+  --text-dim:     hsl(134 100% 17%);
+  --text-muted:   hsl(134 100% 13%);
+  --text-heading: hsl(134 100% 50%);
 }
 
 :root[data-theme="disco"] {
-  --bg-app:         rgba(5, 0, 10, 0.97);
-  --bg-titlebar:    rgba(0, 0, 0, 0.8);
-  --bg-sidebar:     rgba(0, 0, 0, 0.6);
-  --bg-bar:         rgba(0, 0, 0, 0.6);
-  --bg-modal:       rgba(8, 0, 12, 0.99);
-  --border-app:     rgba(255, 0, 180, 0.2);
-  --border-sub:     rgba(255, 0, 180, 0.1);
-  --border-ctrl:    rgba(255, 0, 180, 0.25);
-  --border-modal:   rgba(255, 0, 180, 0.25);
-  --ctrl-bg:        rgba(255, 0, 180, 0.08);
-  --ctrl-hover:     rgba(255, 0, 180, 0.18);
-  --text-dim:       #aa44aa;
-  --text-muted:     #882288;
-  --text-heading:   #ff80ff;
-  --accent:         #ff00cc;
-  --accent-bg:      rgba(100, 0, 80, 0.4);
-  --accent-bg2:     rgba(60, 0, 50, 0.55);
-  --accent-bg3:     rgba(20, 0, 15, 0.9);
-  --accent-border:  rgba(255, 0, 200, 0.4);
-  --accent-blight:  rgba(255, 0, 200, 0.25);
-  --accent-glow:    rgba(255, 0, 200, 0.2);
-  --accent-shadow:  rgba(255, 0, 200, 0.6);
-  --knob-dot:       rgba(255, 100, 255, 0.95);
-  --knob-ring:      rgba(255, 0, 200, 0.4);
-  --mod-bg:         rgba(40, 0, 40, 0.55);
-  --mod-border:     rgba(255, 0, 180, 0.2);
-  --mod-grip-t:     #882288;
-  --mod-grip-b:     #440044;
-  --mod-grip-bdr:   rgba(255, 0, 200, 0.35);
-  --key-active-txt: #440022;
-  --key-black-active-txt: #ff00cc;
-  --hk-color:       #ff00cc;
+  --hue:    306;
+  --sat:    100%;
+  --acc-l:   50%;
+  --bg-s:   100%;
+  --bg-l:   2.5%;
 }
 
 /* ── Base ────────────────────────────────────────────────────────────────────*/
@@ -223,7 +116,7 @@ body {
 
 #app {
   width: 860px;
-  height: 320px;
+  height: 280px;
   background: var(--bg-app);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -258,33 +151,47 @@ button {
 
 button:hover { background: var(--ctrl-hover); }
 
-/* ── Accent-styled selects ───────────────────────────────────────────────────*/
-#patch-select, #channel-select {
+/* ── Disco flash ─────────────────────────────────────────────────────────────*/
+@keyframes disco-msg {
+  0%   { opacity: 0; transform: scale(0.8); }
+  15%  { opacity: 1; transform: scale(1.05); }
+  70%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1); }
+}
+
+/* ── CRT flicker ─────────────────────────────────────────────────────────────*/
+@keyframes crt-flicker {
+  0%, 89%  { opacity: 1; }
+  90%      { opacity: 0.93; }
+  91%      { opacity: 1; }
+  94%      { opacity: 0.96; }
+  95%      { opacity: 1; }
+  100%     { opacity: 1; }
+}
+
+/* ── Shared CRT display style ────────────────────────────────────────────────*/
+#patch-select, #channel-select, #octave-display, .lcd-val {
   font-family: "Courier New", monospace;
   color: var(--accent);
+  text-shadow:
+    0 0 2px var(--accent),
+    0 0 6px var(--accent-shadow),
+    0 0 14px var(--accent-glow);
   background:
-    repeating-linear-gradient(0deg, rgba(0,0,0,0.15) 0px, rgba(0,0,0,0.15) 1px, transparent 1px, transparent 2px),
+    repeating-linear-gradient(0deg, rgba(0,0,0,0.18) 0px, rgba(0,0,0,0.18) 1px, transparent 1px, transparent 2px),
     linear-gradient(135deg, var(--accent-bg) 0%, var(--accent-bg2) 100%),
     var(--accent-bg3);
   border: 1px solid var(--accent-border);
+  animation: crt-flicker 6s infinite;
 }
 
-/* ── Octave display ──────────────────────────────────────────────────────────*/
-#octave-display {
-  font-family: "Courier New", monospace;
-  font-size: 20px;
-  font-weight: bold;
-  color: var(--accent);
-  text-shadow: 0 0 1px var(--accent-shadow);
-  background:
-    repeating-linear-gradient(0deg, rgba(0,0,0,0.15) 0px, rgba(0,0,0,0.15) 1px, transparent 1px, transparent 2px),
-    linear-gradient(135deg, var(--accent-bg) 0%, var(--accent-bg2) 100%),
-    var(--accent-bg3);
-  border: 1px solid var(--accent-blight);
+/* ── LCD value displays (octave + all sidebar controls) ─────────────────────*/
+#octave-display, .lcd-val {
+  font-size: 11px;
   border-radius: 3px;
-  padding: 2px 10px;
-  text-align: center;
-  box-shadow: inset 0 1px 2px rgba(255,255,255,0.05), inset 0 -1px 2px rgba(0,0,0,0.4), 0 0 6px var(--accent-glow);
+  padding: 1px 5px;
+  text-align: right;
+  box-shadow: inset 0 1px 2px rgba(255,255,255,0.05), inset 0 -1px 2px rgba(0,0,0,0.4), 0 0 8px var(--accent-glow);
 }
 
 /* ── Knob ────────────────────────────────────────────────────────────────────*/

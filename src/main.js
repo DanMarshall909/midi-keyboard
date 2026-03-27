@@ -98,15 +98,12 @@ const appTitle = document.getElementById("app-title");
 const portSelect = document.getElementById("port-select");
 const refreshBtn = document.getElementById("refresh-btn");
 const octaveDisplay = document.getElementById("octave-display");
-const octDownBtn = document.getElementById("oct-down");
-const octUpBtn = document.getElementById("oct-up");
 const channelSelect = document.getElementById("channel-select");
 const patchSelect = document.getElementById("patch-select");
 const statusEl = document.getElementById("status");
 const arrowCcSelect = document.getElementById("arrow-cc-select");
 const keyboardContainer = document.getElementById("keyboard-container");
 const titlebar = document.getElementById("titlebar");
-const knobsRow = document.getElementById("knobs-row");
 const sidebar = document.getElementById("sidebar");
 const modTrack = document.getElementById("mod-track");
 const modFill = document.getElementById("mod-fill");
@@ -215,8 +212,8 @@ function initKeyboard3D() {
     // Camera — low perspective angle, player's-eye view
     const w = container.clientWidth || 700;
     const h = container.clientHeight || 200;
-    kbCamera = new THREE.PerspectiveCamera(25, w / h, 0.1, 100);
-    kbCamera.position.set(0, 15, 10);
+    kbCamera = new THREE.PerspectiveCamera(20, w / h, 0.1, 100);
+    kbCamera.position.set(0, 28, 5);
     kbCamera.lookAt(0, 0, 0);
     kbRenderer.setSize(w, h);
 
@@ -224,7 +221,7 @@ function initKeyboard3D() {
     kbAmbient = new THREE.AmbientLight(0xffffff, 0.55);
     kbScene.add(kbAmbient);
 
-    kbSun = new THREE.DirectionalLight(0xff0000, 10.1);
+    kbSun = new THREE.DirectionalLight(0xfffaf0, 1.1);
     kbSun.position.set(-12, 12, -8);
     kbSun.castShadow = true;
     kbSun.shadow.mapSize.set(1024, 1024);
@@ -236,7 +233,7 @@ function initKeyboard3D() {
     kbSun.shadow.camera.far = 40;
     kbScene.add(kbSun);
 
-    kbFill = new THREE.DirectionalLight(0x00ff, 12.9);
+    kbFill = new THREE.DirectionalLight(0x00e8ff, 0.9);
     kbFill.position.set(12, 12, -8);
     kbScene.add(kbFill);
 
@@ -307,7 +304,7 @@ function initKeyboard3D() {
                 strobeBurstStart = performance.now();
             }
             // Cycle every themed CSS variable through offset hues
-            const h1 = (discoAngle * 15) % 360;
+            const h1 = (discoAngle * 115) % 360;
             const h2 = (h1 + 120) % 360;
             const h3 = (h1 + 240) % 360;
             const r = document.documentElement;
@@ -491,14 +488,10 @@ modTrack.addEventListener("mousedown", (e) => {
     e.preventDefault();
     const startY = e.clientY;
     const startVal = modValue;
-    const trackH = modTrack.clientHeight;
 
     function onMove(ev) {
         const dy = startY - ev.clientY; // drag up = positive
-        const centerPos = (trackH - 18) / 2;
-        const sensitivity = 0.35; // finer granularity (3x more precision)
-        modValue = Math.round((dy / centerPos) * 127 * sensitivity);
-        modValue = Math.max(-127, Math.min(127, modValue + startVal));
+        modValue = Math.max(-127, Math.min(127, startVal + Math.round(dy * 127 / 35)));
         updateModWheel();
         // Map ±127 to MIDI 0-127 for CC
         const midiValue = Math.round((modValue + 127) / 2);
@@ -512,67 +505,43 @@ modTrack.addEventListener("mousedown", (e) => {
     document.addEventListener("mouseup", onUp);
 });
 
-// ── Rotary knob system ────────────────────────────────────────────────────────
-function knobRotation(value, min, max) {
-    return -135 + ((value - min) / (max - min)) * 270;
-}
+// ── Draggable LCD controls ────────────────────────────────────────────────────
+let panValue  = 64;
+let exprValue = 127;
+let revValue  = 0;
+let choValue  = 0;
 
-function initKnob(knobEl) {
-    const val = parseInt(knobEl.dataset.value);
-    const min = parseInt(knobEl.dataset.min);
-    const max = parseInt(knobEl.dataset.max);
-    knobEl.style.setProperty("--knob-rot", `${knobRotation(val, min, max)}deg`);
-}
+const velDisplay  = document.getElementById("vel-display");
+const panDisplay  = document.getElementById("pan-display");
+const exprDisplay = document.getElementById("expr-display");
+const revDisplay  = document.getElementById("rev-display");
+const choDisplay  = document.getElementById("cho-display");
 
-function makeKnobDraggable(knobEl, valEl, onChange) {
-    const min = parseInt(knobEl.dataset.min);
-    const max = parseInt(knobEl.dataset.max);
-
-    knobEl.addEventListener("mousedown", (e) => {
+function makeDraggableLCD(el, min, max, get, set, pxPerUnit = 1) {
+    el.addEventListener("mousedown", (e) => {
         e.preventDefault();
-        const startY = e.clientY;
-        const startVal = parseInt(knobEl.dataset.value);
-
+        const startY   = e.clientY;
+        const startVal = get();
         function onMove(ev) {
-            const dy = startY - ev.clientY; // drag up = increase
-            const newVal = Math.max(min, Math.min(max, Math.round(startVal + dy * (max - min) / 100)));
-            if (newVal === parseInt(knobEl.dataset.value)) return;
-            knobEl.dataset.value = newVal;
-            knobEl.style.setProperty("--knob-rot", `${knobRotation(newVal, min, max)}deg`);
-            valEl.textContent = newVal;
-            onChange(newVal);
+            const newVal = Math.max(min, Math.min(max, Math.round(startVal + (startY - ev.clientY) / pxPerUnit)));
+            if (newVal !== get()) { set(newVal); el.textContent = newVal; }
         }
         function onUp() {
             document.removeEventListener("mousemove", onMove);
-            document.removeEventListener("mouseup", onUp);
+            document.removeEventListener("mouseup",   onUp);
         }
         document.addEventListener("mousemove", onMove);
-        document.addEventListener("mouseup", onUp);
+        document.addEventListener("mouseup",   onUp);
     });
 }
 
-// Init velocity knob
-const knobVel = document.getElementById("knob-vel");
-const knobVelVal = document.getElementById("knob-vel-val");
-initKnob(knobVel);
-makeKnobDraggable(knobVel, knobVelVal, (v) => { velocity = v; });
-
-// Init CC knobs
-const CC_KNOBS = [
-    ["knob-pan", "knob-pan-val"],
-    ["knob-expr", "knob-expr-val"],
-    ["knob-rev", "knob-rev-val"],
-    ["knob-cho", "knob-cho-val"],
-];
-for (const [id, valId] of CC_KNOBS) {
-    const el = document.getElementById(id);
-    const valEl = document.getElementById(valId);
-    const cc = parseInt(el.dataset.cc);
-    initKnob(el);
-    makeKnobDraggable(el, valEl, (v) => {
-        if (connected) invoke("send_cc", { channel, cc, value: v }).catch(() => { });
-    });
-}
+makeDraggableLCD(octaveDisplay, 0, 8,   () => baseOctave, (v) => { baseOctave = v; buildKeys3D(); }, 12);
+const PX_PER_UNIT = 35 / 127;
+makeDraggableLCD(velDisplay,    1, 127, () => velocity,   (v) => { velocity = v; }, PX_PER_UNIT);
+makeDraggableLCD(panDisplay,    0, 127, () => panValue,   (v) => { panValue  = v; if (connected) invoke("send_cc", { channel, cc: 10, value: v }).catch(() => {}); }, PX_PER_UNIT);
+makeDraggableLCD(exprDisplay,   0, 127, () => exprValue,  (v) => { exprValue = v; if (connected) invoke("send_cc", { channel, cc: 11, value: v }).catch(() => {}); }, PX_PER_UNIT);
+makeDraggableLCD(revDisplay,    0, 127, () => revValue,   (v) => { revValue  = v; if (connected) invoke("send_cc", { channel, cc: 91, value: v }).catch(() => {}); }, PX_PER_UNIT);
+makeDraggableLCD(choDisplay,    0, 127, () => choValue,   (v) => { choValue  = v; if (connected) invoke("send_cc", { channel, cc: 93, value: v }).catch(() => {}); }, PX_PER_UNIT);
 
 // ── Keyboard events ───────────────────────────────────────────────────────────
 window.addEventListener("keydown", (e) => {
@@ -588,7 +557,7 @@ window.addEventListener("keydown", (e) => {
         e.preventDefault();
         baseOctave = parseInt(e.key.slice(1)) - 1;
         octaveDisplay.textContent = baseOctave;
-        buildKeyboard();
+        buildKeys3D();
         return;
     }
 
@@ -626,7 +595,7 @@ window.addEventListener("keyup", (e) => {
 // Mouse wheel = modulation (CC 1)
 window.addEventListener("wheel", (e) => {
     e.preventDefault();
-    modValue = Math.max(-127, Math.min(127, modValue - Math.sign(e.deltaY) * 5));
+    modValue = Math.max(-127, Math.min(127, modValue - Math.sign(e.deltaY) * 18));
     updateModWheel();
     const midiValue = Math.round((modValue + 127) / 2);
     if (connected) invoke("send_cc", { channel, cc: 1, value: midiValue }).catch(() => { });
@@ -706,14 +675,6 @@ portSelect.addEventListener("change", async () => {
 
 refreshBtn.addEventListener("click", loadPorts);
 
-// ── Controls ──────────────────────────────────────────────────────────────────
-octDownBtn.addEventListener("click", () => {
-    if (baseOctave > 0) { baseOctave--; octaveDisplay.textContent = baseOctave; buildKeys3D(); }
-});
-octUpBtn.addEventListener("click", () => {
-    if (baseOctave < 8) { baseOctave++; octaveDisplay.textContent = baseOctave; buildKeys3D(); }
-});
-
 // Channel selector
 for (let i = 1; i <= 16; i++) {
     const opt = document.createElement("option");
@@ -784,7 +745,7 @@ async function correctAspectRatio() {
         const logW = size.width / sf;
         const logH = size.height / sf;
         const sidebarW = sidebar.offsetWidth;
-        const vertOverhead = titlebar.offsetHeight + knobsRow.offsetHeight;
+        const vertOverhead = titlebar.offsetHeight;
         const RATIO = 14 / 3.6;
         const dW = Math.abs(logW - prevLogW);
         const dH = Math.abs(logH - prevLogH);
@@ -821,7 +782,7 @@ document.getElementById("close-btn").addEventListener("click", () => {
 // ── Zoom controls ─────────────────────────────────────────────────────────────
 let zoomLevel = parseFloat(localStorage.getItem("zoomLevel")) || 1;
 let baseWidth = 860;
-let baseHeight = 320;
+let baseHeight = 200;
 let isZooming = false;
 
 const appEl = document.getElementById("app");
@@ -887,7 +848,27 @@ function applyTheme(name) {
     setThemeLighting(name);
 }
 
-swatches.forEach(s => s.addEventListener("click", () => applyTheme(s.dataset.theme)));
+swatches.forEach(s => s.addEventListener("click", () => {
+    applyTheme(s.dataset.theme);
+    if (s.dataset.theme === "disco") flashDiscoMsg();
+}));
+
+function flashDiscoMsg() {
+    const el = document.createElement("div");
+    el.textContent = "OH YEAH BAYBEE!";
+    Object.assign(el.style, {
+        position: "absolute", inset: "0", display: "flex",
+        alignItems: "center", justifyContent: "center",
+        fontFamily: '"Courier New", monospace', fontWeight: "bold",
+        fontSize: "32px", letterSpacing: "0.12em",
+        color: "hsl(306 100% 70%)",
+        textShadow: "0 0 8px hsl(306 100% 60%), 0 0 24px hsl(306 100% 40%)",
+        zIndex: "200", pointerEvents: "none",
+        animation: "disco-msg 1.4s ease-out forwards",
+    });
+    document.getElementById("app").appendChild(el);
+    el.addEventListener("animationend", () => el.remove());
+}
 
 // Apply saved theme on startup
 applyTheme(localStorage.getItem("theme") || "default");
@@ -926,6 +907,7 @@ octaveDisplay.textContent = baseOctave;
 appTitle.textContent = GM_PATCH_NAMES[patch];
 updateZoomDisplay();
 initKeyboard3D();
+setThemeLighting(localStorage.getItem("theme") || "default");
 updateModWheel();
 
 appWindow.innerSize().then(s => appWindow.scaleFactor().then(sf => {
