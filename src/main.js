@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import * as THREE from "three";
+import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 
 // ── Key → MIDI note mapping (GarageBand layout) ──────────────────────────────
 const KEY_MAP = {
@@ -359,7 +360,7 @@ function buildKeys3D() {
     const startX = -totalW / 2 + (WKW + KEY_GAP) / 2;
 
     // White keys — shared geometry, shared material
-    const whiteGeo = new THREE.BoxGeometry(WKW, WKH, WKD);
+    const whiteGeo = new RoundedBoxGeometry(WKW, WKH, WKD, 3, 0.055);
     for (let oct = 0; oct < totalOctaves; oct++) {
         for (let i = 0; i < WHITE_OFFSETS.length; i++) {
             const midi = (baseOctave + oct) * 12 + 12 + WHITE_OFFSETS[i];
@@ -376,7 +377,7 @@ function buildKeys3D() {
     }
 
     // Black keys — shared geometry, shared material
-    const blackGeo = new THREE.BoxGeometry(BKW, BKH, BKD);
+    const blackGeo = new RoundedBoxGeometry(BKW, BKH, BKD, 3, 0.055);
     const blackY = (WKH + BKH) / 2;
     const blackZ = -(WKD - BKD) / 2;
     for (let oct = 0; oct < totalOctaves; oct++) {
@@ -517,11 +518,94 @@ function knobRotation(value, min, max) {
     return -135 + ((value - min) / (max - min)) * 270;
 }
 
-function initKnob(knobEl) {
-    const val = parseInt(knobEl.dataset.value);
+// ── 3D Knob rendering ─────────────────────────────────────────────────────────
+const knob3DMap = new WeakMap();
+const allKnob3DData = [];
+
+function parseCssColorToHex(varName) {
+    const str = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+    const m = str.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+    if (m) return (parseInt(m[1]) << 16) | (parseInt(m[2]) << 8) | parseInt(m[3]);
+    const h = str.replace(/^#/, '');
+    if (h.length === 6) return parseInt(h, 16);
+    if (h.length === 3) return parseInt(h[0] + h[0] + h[1] + h[1] + h[2] + h[2], 16);
+    return 0x7ab4ff;
+}
+
+function refreshKnob3DColors() {
+    const col = parseCssColorToHex('--knob-dot');
+    for (const data of allKnob3DData) {
+        data.pipMat.color.setHex(col);
+        data.pipMat.emissive.setHex(col);
+        data.pipMat.needsUpdate = true;
+        data.renderer.render(data.scene, data.camera);
+    }
+}
+
+function initKnob3D(canvasEl) {
+    const CSS_SIZE = 36;
+    canvasEl.style.width = CSS_SIZE + 'px';
+    canvasEl.style.height = CSS_SIZE + 'px';
+
+    const renderer = new THREE.WebGLRenderer({ canvas: canvasEl, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(CSS_SIZE, CSS_SIZE);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 100);
+    camera.position.set(0, 4.2, 1.5);
+    camera.lookAt(0, 0, 0);
+
+    const ambient = new THREE.AmbientLight(0xffffff, 0.50);
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.1);
+    keyLight.position.set(2, 4, 2);
+    const rimLight = new THREE.DirectionalLight(0x4466cc, 0.35);
+    rimLight.position.set(-1.5, 2, -2);
+    scene.add(ambient, keyLight, rimLight);
+
+    // Tapered cylinder body
+    const bodyGeo = new THREE.CylinderGeometry(0.60, 0.70, 0.28, 32);
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x282828, roughness: 0.28, metalness: 0.65 });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    scene.add(body);
+
+    // Flat top cap — slightly lighter
+    const capGeo = new THREE.CylinderGeometry(0.59, 0.60, 0.025, 32);
+    const capMat = new THREE.MeshStandardMaterial({ color: 0x3c3c3c, roughness: 0.18, metalness: 0.75 });
+    const cap = new THREE.Mesh(capGeo, capMat);
+    cap.position.y = 0.15;
+    scene.add(cap);
+
+    // Indicator pip on top face, child of body so it rotates with it
+    const pipGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.055, 10);
+    const pipCol = parseCssColorToHex('--knob-dot');
+    const pipMat = new THREE.MeshStandardMaterial({
+        color: pipCol, emissive: pipCol, emissiveIntensity: 0.55,
+        roughness: 0.1, metalness: 0.1,
+    });
+    const pip = new THREE.Mesh(pipGeo, pipMat);
+    pip.position.set(0, 0.19, 0.38);
+    body.add(pip);
+
+    const data = { renderer, scene, camera, body, pipMat };
+    knob3DMap.set(canvasEl, data);
+    allKnob3DData.push(data);
+    return data;
+}
+
+function setKnob3DAngle(knobEl, value) {
+    const data = knob3DMap.get(knobEl);
+    if (!data) return;
     const min = parseInt(knobEl.dataset.min);
     const max = parseInt(knobEl.dataset.max);
-    knobEl.style.setProperty("--knob-rot", `${knobRotation(val, min, max)}deg`);
+    data.body.rotation.y = knobRotation(value, min, max) * Math.PI / 180;
+    data.renderer.render(data.scene, data.camera);
+}
+
+function initKnob(knobEl) {
+    const val = parseInt(knobEl.dataset.value);
+    initKnob3D(knobEl);
+    setKnob3DAngle(knobEl, val);
 }
 
 function makeKnobDraggable(knobEl, valEl, onChange) {
@@ -538,7 +622,7 @@ function makeKnobDraggable(knobEl, valEl, onChange) {
             const newVal = Math.max(min, Math.min(max, Math.round(startVal + dy * (max - min) / 100)));
             if (newVal === parseInt(knobEl.dataset.value)) return;
             knobEl.dataset.value = newVal;
-            knobEl.style.setProperty("--knob-rot", `${knobRotation(newVal, min, max)}deg`);
+            setKnob3DAngle(knobEl, newVal);
             valEl.textContent = newVal;
             onChange(newVal);
         }
@@ -885,6 +969,7 @@ function applyTheme(name) {
     swatches.forEach(s => s.classList.toggle("active", s.dataset.theme === name));
     localStorage.setItem("theme", name);
     setThemeLighting(name);
+    refreshKnob3DColors();
 }
 
 swatches.forEach(s => s.addEventListener("click", () => applyTheme(s.dataset.theme)));
