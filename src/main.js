@@ -119,7 +119,7 @@ const BLACK_KEY_DEFS = [
 
 // Key dimensions (Three.js units)
 const WKW = 1.05, WKH = 0.18, WKD = 4.2;   // white key width/height/depth
-const BKW = 0.63, BKH = 0.24, BKD = 2.5;   // black key
+const BKW = 0.63, BKH = 0.24, BKD = 3;   // black key
 const KEY_GAP = 0.05;
 const DISPLAY_OCTAVES = 2;                   // total octaves shown in the 3D view
 const BODY_D = WKD + 1.0;                  // depth of the main deck
@@ -737,8 +737,8 @@ function initSceneControls() {
             color: pipCol, emissive: pipCol, emissiveIntensity: 0.6,
             roughness: 0.1, metalness: 0.1,
         });
-        const pip = new THREE.Mesh(new THREE.CylinderGeometry(KNOB_R * 0.08, KNOB_R * 0.08, 0.04, 10), pipMat);
-        pip.position.set(0, 0.13, -KNOB_R * 0.54);
+        const pip = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.04, 10), pipMat);
+        pip.position.set(0, 0.13, -0.27);
         body.add(pip);
 
         body.position.set(kx, knobY, knobBaseZ);
