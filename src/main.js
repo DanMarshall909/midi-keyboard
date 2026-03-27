@@ -125,6 +125,7 @@ const DISPLAY_OCTAVES = 2;                   // total octaves shown in the 3D vi
 const BODY_D = WKD + 1.0;                  // depth of the main deck
 const HEAD_H = 0.7;                         // extra height of the raised rear head
 const HEAD_D = 1.5;                         // front-to-back depth of the head slab
+const KNOB_R = 0.50;                         // knob base radius
 
 // Instrument left-panel offset: keys are shifted right so mod wheel + left panel fit
 const KEY_OFFSET_X = 3.0;
@@ -721,11 +722,11 @@ function initSceneControls() {
         const kd = SCENE_KNOBS[i];
         const kx = knobStartX + i * (knobSpanX / (SCENE_KNOBS.length - 1));
 
-        const bodyGeo = new THREE.CylinderGeometry(0.42, 0.50, 0.20, 32);
+        const bodyGeo = new THREE.CylinderGeometry(KNOB_R * 0.84, KNOB_R, 0.20, 32);
         const bodyMat = new THREE.MeshStandardMaterial({ color: 0x282828, roughness: 0.28, metalness: 0.65 });
         const body = new THREE.Mesh(bodyGeo, bodyMat);
 
-        const capGeo = new THREE.CylinderGeometry(0.41, 0.42, 0.018, 32);
+        const capGeo = new THREE.CylinderGeometry(KNOB_R * 0.82, KNOB_R * 0.84, 0.018, 32);
         const capMat = new THREE.MeshStandardMaterial({ color: 0x3c3c3c, roughness: 0.18, metalness: 0.75 });
         const cap = new THREE.Mesh(capGeo, capMat);
         cap.position.y = 0.11;
@@ -736,8 +737,8 @@ function initSceneControls() {
             color: pipCol, emissive: pipCol, emissiveIntensity: 0.6,
             roughness: 0.1, metalness: 0.1,
         });
-        const pip = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.04, 10), pipMat);
-        pip.position.set(0, 0.13, -0.27);
+        const pip = new THREE.Mesh(new THREE.CylinderGeometry(KNOB_R * 0.08, KNOB_R * 0.08, 0.04, 10), pipMat);
+        pip.position.set(0, 0.13, -KNOB_R * 0.54);
         body.add(pip);
 
         body.position.set(kx, knobY, knobBaseZ);
@@ -842,9 +843,11 @@ window.addEventListener("blur", () => {
         updateSceneModWheel();
         invoke("send_cc", { channel, cc: 1, value: 0 }).catch(() => { });
     }
-    for (const midi of heldKeyNotes.values()) triggerNoteOff(midi);
+    for (const key of heldKeys) {
+        const midi = midiNoteFromKey(key);
+        if (midi !== null) triggerNoteOff(midi);
+    }
     heldKeys.clear();
-    heldKeyNotes.clear();
 });
 
 // ── Port management ───────────────────────────────────────────────────────────
