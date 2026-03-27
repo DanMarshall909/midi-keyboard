@@ -84,7 +84,7 @@ const GM_PATCHES = [
 const GM_PATCH_NAMES = GM_PATCHES.flatMap(([, names]) => names);
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let baseOctave = 4;
+let baseOctave = 3;
 let velocity = 100;
 let channel = 0;
 let patch = 0;
@@ -98,15 +98,12 @@ const heldKeys = new Set();
 const appTitle = document.getElementById("app-title");
 const portSelect = document.getElementById("port-select");
 const refreshBtn = document.getElementById("refresh-btn");
-const octaveDisplay = document.getElementById("octave-display");
 const channelSelect = document.getElementById("channel-select");
 const patchSelect = document.getElementById("patch-select");
 const statusEl = document.getElementById("status");
 const arrowCcSelect = document.getElementById("arrow-cc-select");
 const keyboardContainer = document.getElementById("keyboard-container");
 const titlebar = document.getElementById("titlebar");
-const sidebar = document.getElementById("sidebar");
-const modValEl = document.getElementById("mod-val");
 
 // ── 3D Keyboard ───────────────────────────────────────────────────────────────
 const WHITE_OFFSETS = [0, 2, 4, 5, 7, 9, 11];
@@ -119,13 +116,35 @@ const BLACK_KEY_DEFS = [
 ];
 
 // Key dimensions (Three.js units)
-const WKW = 1.85, WKH = 0.22, WKD = 5.8;   // white key width/height/depth
-const BKW = 1.1, BKH = 0.55, BKD = 3.4;   // black key
-const KEY_GAP = 0.06;
+const WKW = 1.05, WKH = 0.18, WKD = 4.2;   // white key width/height/depth
+const BKW = 0.63, BKH = 0.24, BKD = 2.5;   // black key
+const KEY_GAP = 0.05;
+const DISPLAY_OCTAVES = 2;                   // total octaves shown in the 3D view
+const BODY_D = WKD + 1.0;                  // depth of the main deck
+const HEAD_H = 0.7;                         // extra height of the raised rear head
+const HEAD_D = 1.5;                         // front-to-back depth of the head slab
+
+// Instrument left-panel offset: keys are shifted right so mod wheel + left panel fit
+const KEY_OFFSET_X = 3.0;
+
+// In-scene control data
+const SCENE_KNOBS = [
+    { id: 'vel', cc: -1, min: 1, max: 127, value: 100, label: 'VEL' },
+    { id: 'pan', cc: 10, min: 0, max: 127, value: 64, label: 'PAN' },
+    { id: 'expr', cc: 11, min: 0, max: 127, value: 127, label: 'EXP' },
+    { id: 'rev', cc: 91, min: 0, max: 127, value: 0, label: 'REV' },
+    { id: 'cho', cc: 93, min: 0, max: 127, value: 0, label: 'CHO' },
+];
+let kbModWheelSpinner = null;
+let kbModWheelHitbox = null;
+const kbKnobBodies = [];   // THREE.Mesh per knob (for raycasting + rotation)
 
 // Shared materials — no per-key cloning
 const matWhite = new THREE.MeshStandardMaterial({ color: 0xf0f0eb, roughness: 0.35, metalness: 0.0 });
-const matBlack = new THREE.MeshStandardMaterial({ color: 0x1c1c1c, roughness: 0.2, metalness: 0.05 });
+const matBlack = new THREE.MeshStandardMaterial({ color: 0x1c1c1c, roughness: 0.20, metalness: 0.05 });
+const matWhiteDim = new THREE.MeshStandardMaterial({ color: 0xb0b0a8, roughness: 0.50, metalness: 0.0 });
+const matBlackDim = new THREE.MeshStandardMaterial({ color: 0x282828, roughness: 0.30, metalness: 0.05 });
+const matHousing = new THREE.MeshStandardMaterial({ color: 0x3a3a3e, roughness: 0.78, metalness: 0.04 });
 
 const noteToMesh = {};
 const meshToMidi = new Map();
@@ -141,11 +160,11 @@ let strobeBurstStart = -1;  // performance.now() timestamp, -1 = idle
 let strobeCountdown = 360;  // frames until next burst
 
 const THEME_LIGHTS = {
-    default:   { sun: { color: 0xfffaf0, intensity: 1.1 }, fill: { color: 0x00e8ff, intensity: 0.9 } },
-    midnight:  { sun: { color: 0xd0d8ff, intensity: 0.65 }, fill: { color: 0x203070, intensity: 0.35 } },
+    default: { sun: { color: 0xfffaf0, intensity: 1.1 }, fill: { color: 0x00e8ff, intensity: 0.9 } },
+    midnight: { sun: { color: 0xd0d8ff, intensity: 0.65 }, fill: { color: 0x203070, intensity: 0.35 } },
     synthwave: { sun: { color: 0xff00ff, intensity: 1.3 }, fill: { color: 0x00ffff, intensity: 1.0 } },
-    ember:     { sun: { color: 0xff9900, intensity: 1.4 }, fill: { color: 0xff4400, intensity: 0.7 } },
-    matrix:    { sun: { color: 0x00ff66, intensity: 1.2 }, fill: { color: 0x00aa44, intensity: 0.15 } },
+    ember: { sun: { color: 0xff9900, intensity: 1.4 }, fill: { color: 0xff4400, intensity: 0.7 } },
+    matrix: { sun: { color: 0x00ff66, intensity: 1.2 }, fill: { color: 0x00aa44, intensity: 0.15 } },
 };
 
 function setThemeLighting(name) {
@@ -158,13 +177,13 @@ function setThemeLighting(name) {
     strobeCountdown = 90;
     if (kbAmbient) kbAmbient.intensity = 0.55;
     for (const prop of [
-        '--accent','--accent-border','--accent-blight','--accent-glow','--accent-shadow',
-        '--accent-bg','--accent-bg2','--accent-bg3',
-        '--border-app','--border-sub','--border-ctrl','--border-modal',
-        '--ctrl-bg','--ctrl-hover',
-        '--knob-dot','--knob-ring',
-        '--text-heading','--text-dim','--text-muted','--hk-color',
-        '--mod-bg','--mod-border','--mod-grip-t','--mod-grip-b','--mod-grip-bdr',
+        '--accent', '--accent-border', '--accent-blight', '--accent-glow', '--accent-shadow',
+        '--accent-bg', '--accent-bg2', '--accent-bg3',
+        '--border-app', '--border-sub', '--border-ctrl', '--border-modal',
+        '--ctrl-bg', '--ctrl-hover',
+        '--knob-dot', '--knob-ring',
+        '--text-heading', '--text-dim', '--text-muted', '--hk-color',
+        '--mod-bg', '--mod-border', '--mod-grip-t', '--mod-grip-b', '--mod-grip-bdr',
     ]) {
         document.documentElement.style.removeProperty(prop);
     }
@@ -194,6 +213,7 @@ function setThemeLighting(name) {
     kbNeedsRender = true;
 }
 
+
 function initKeyboard3D() {
     const canvas = document.getElementById("keyboard-canvas");
     const container = keyboardContainer;
@@ -203,16 +223,18 @@ function initKeyboard3D() {
 
     // Renderer
     kbRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    kbRenderer.setClearColor(0x000000, 0);
     kbRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 1));
     kbRenderer.shadowMap.enabled = true;
     kbRenderer.shadowMap.type = THREE.PCFShadowMap;
 
-    // Camera — low perspective angle, player's-eye view
+    // Camera — elevated front angle showing full keyboard depth
     const w = container.clientWidth || 700;
     const h = container.clientHeight || 200;
-    kbCamera = new THREE.PerspectiveCamera(20, w / h, 0.1, 100);
-    kbCamera.position.set(0, 28, 5);
-    kbCamera.lookAt(0, 0, 0);
+    kbCamera = new THREE.PerspectiveCamera(22.5, w / h, 0.1, 100);
+    const xOffset = 2.5; // slight right offset looks better with mod wheel on left
+    kbCamera.position.set(xOffset, 16, 5);
+    kbCamera.lookAt(xOffset, 0, -0.25);
     kbRenderer.setSize(w, h);
 
     // Lighting
@@ -220,51 +242,156 @@ function initKeyboard3D() {
     kbScene.add(kbAmbient);
 
     kbSun = new THREE.DirectionalLight(0xfffaf0, 1.1);
-    kbSun.position.set(-12, 12, -8);
+    kbSun.position.set(-18, 18, 8);
     kbSun.castShadow = true;
     kbSun.shadow.mapSize.set(1024, 1024);
-    kbSun.shadow.camera.left = -18;
-    kbSun.shadow.camera.right = 18;
+    kbSun.shadow.camera.left = -16;
+    kbSun.shadow.camera.right = 16;
     kbSun.shadow.camera.top = 10;
     kbSun.shadow.camera.bottom = -10;
     kbSun.shadow.camera.near = 1;
-    kbSun.shadow.camera.far = 40;
+    kbSun.shadow.camera.far = 60;
     kbScene.add(kbSun);
 
-    kbFill = new THREE.DirectionalLight(0x00e8ff, 0.9);
-    kbFill.position.set(12, 12, -8);
+    kbFill = new THREE.DirectionalLight(0xfffa0, 0.9);
+    kbFill.position.set(1, 12, 8);
     kbScene.add(kbFill);
 
-    // Keyboard frame / fallboard
-    const frameGeo = new THREE.BoxGeometry(14 * (WKW + KEY_GAP) + 0.4, 0.18, WKD + 0.6);
-    const frameMat = new THREE.MeshStandardMaterial({ color: 0x111118, roughness: 0.6 });
-    const frame = new THREE.Mesh(frameGeo, frameMat);
-    frame.position.set(0, -WKH / 2 - 0.09, 0);
-    frame.receiveShadow = true;
-    kbScene.add(frame);
+    // ── Piano housing (built once; keys rebuilt per octave change) ────────────
+    const totalKeyW = DISPLAY_OCTAVES * 7 * (WKW + KEY_GAP);
+    // ── Instrument body ───────────────────────────────────────────────────────
+    // Spans key area plus mod wheel to the left
+    const wheelW = 0.55;
+    const keyLeftEdge = KEY_OFFSET_X - totalKeyW / 2;
+    const modCX = keyLeftEdge - 0.35 - wheelW / 2;  // matches initSceneControls
+    const bodyLeft = modCX - wheelW / 2 - 0.5;
+    const bodyRight = KEY_OFFSET_X + totalKeyW / 2 + 0.3;
+    const bodyW = bodyRight - bodyLeft;
+    const bodyCX = (bodyLeft + bodyRight) / 2;
+    const bodyH = 1.5;
+    const bodyTop = -WKH / 2;          // flush with key bottoms
+
+    // Main deck
+    const bodyMesh = new THREE.Mesh(
+        new RoundedBoxGeometry(bodyW, bodyH, BODY_D, 4, 0.18),
+        matHousing
+    );
+    bodyMesh.position.set(bodyCX, bodyTop - bodyH / 2, 0);
+    bodyMesh.castShadow = true;
+    bodyMesh.receiveShadow = true;
+    kbScene.add(bodyMesh);
+
+    // Raised head at rear (negative Z = away from player)
+    const headZ = -(BODY_D - HEAD_D) / 2;
+    const headMesh = new THREE.Mesh(
+        new RoundedBoxGeometry(bodyW, bodyH + HEAD_H, HEAD_D, 4, 0.14),
+        matHousing
+    );
+    headMesh.position.set(bodyCX, bodyTop - bodyH / 2 + HEAD_H / 2, headZ);
+    headMesh.castShadow = true;
+    headMesh.receiveShadow = true;
+    kbScene.add(headMesh);
 
     buildKeys3D();
+    initSceneControls();
 
-    // Mouse events via raycasting
+    // ── Unified mouse handling for keys, mod wheel, and knobs ────────────────
+    let dragInfo = null;
+
+    function getCanvasNDC(e) {
+        const rect = canvas.getBoundingClientRect();
+        return {
+            x: ((e.clientX - rect.left) / rect.width) * 2 - 1,
+            y: ((e.clientY - rect.top) / rect.height) * -2 + 1,
+        };
+    }
+
     canvas.addEventListener("mousedown", (e) => {
         if (e.button !== 0) return;
-        const midi = raycastMidi(e);
-        if (midi !== null) triggerNoteOn(midi);
-    });
-    canvas.addEventListener("mouseup", () => {
-        for (const midi of [...activeNotes]) triggerNoteOff(midi);
-    });
-    canvas.addEventListener("mouseleave", () => {
-        for (const midi of [...activeNotes]) triggerNoteOff(midi);
-    });
-    canvas.addEventListener("mousemove", (e) => {
-        // slide: release keys no longer under cursor while dragging
-        if (e.buttons !== 1) return;
-        const midi = raycastMidi(e);
-        for (const held of [...activeNotes]) {
-            if (held !== midi) triggerNoteOff(held);
+        e.preventDefault();
+        const ndc = getCanvasNDC(e);
+        kbRaycaster.setFromCamera(ndc, kbCamera);
+
+        // Priority 1: knobs
+        const knobHits = kbRaycaster.intersectObjects(kbKnobBodies, true);
+        if (knobHits.length) {
+            const body = knobHits[0].object.parent?.userData?.type === 'knob'
+                ? knobHits[0].object.parent
+                : knobHits[0].object;
+            const ki = body.userData.knobIndex ?? knobHits[0].object.userData.knobIndex;
+            if (ki !== undefined) {
+                dragInfo = { type: 'knob', startY: e.clientY, startVal: SCENE_KNOBS[ki].value, ki };
+                return;
+            }
         }
-        if (midi !== null && !activeNotes.has(midi)) triggerNoteOn(midi);
+
+        // Priority 2: mod wheel
+        if (kbModWheelHitbox) {
+            const mwHits = kbRaycaster.intersectObject(kbModWheelHitbox, false);
+            if (mwHits.length) {
+                dragInfo = { type: 'modwheel', startY: e.clientY, startVal: modValue };
+                return;
+            }
+        }
+
+        // Priority 3: keys
+        const midi = raycastMidi(e);
+        if (midi !== null) {
+            triggerNoteOn(midi);
+            dragInfo = { type: 'key' };
+        }
+    });
+
+    canvas.addEventListener("mousemove", (e) => {
+        if (!dragInfo) return;
+
+        if (dragInfo.type === 'key') {
+            if (e.buttons !== 1) return;
+            const midi = raycastMidi(e);
+            for (const held of [...activeNotes]) {
+                if (held !== midi) triggerNoteOff(held);
+            }
+            if (midi !== null && !activeNotes.has(midi)) triggerNoteOn(midi);
+            return;
+        }
+
+        if (dragInfo.type === 'modwheel') {
+            const dy = dragInfo.startY - e.clientY;
+            modValue = Math.max(-127, Math.min(127, Math.round(dragInfo.startVal + dy * 127 / 35)));
+            updateSceneModWheel();
+            const midiVal = Math.round((modValue + 127) / 2);
+            if (connected) invoke("send_cc", { channel, cc: 1, value: midiVal }).catch(() => { });
+            return;
+        }
+
+        if (dragInfo.type === 'knob') {
+            const { ki, startY, startVal } = dragInfo;
+            const kd = SCENE_KNOBS[ki];
+            const newVal = Math.max(kd.min, Math.min(kd.max,
+                Math.round(startVal + (startY - e.clientY) * (kd.max - kd.min) / 100)
+            ));
+            if (newVal === kd.value) return;
+            kd.value = newVal;
+            if (ki === 0) { velocity = newVal; }
+            else if (connected) invoke("send_cc", { channel, cc: kd.cc, value: newVal }).catch(() => { });
+            const rot = -knobRotation(newVal, kd.min, kd.max) * Math.PI / 180;
+            kbKnobBodies[ki].rotation.y = rot;
+            kbNeedsRender = true;
+        }
+    });
+
+    canvas.addEventListener("mouseup", () => {
+        if (dragInfo?.type === 'key') {
+            for (const midi of [...activeNotes]) triggerNoteOff(midi);
+        }
+        dragInfo = null;
+    });
+
+    canvas.addEventListener("mouseleave", () => {
+        if (dragInfo?.type === 'key') {
+            for (const midi of [...activeNotes]) triggerNoteOff(midi);
+        }
+        dragInfo = null;
     });
 
     // On-demand render loop; disco mode forces continuous animation
@@ -306,31 +433,31 @@ function initKeyboard3D() {
             const h2 = (h1 + 120) % 360;
             const h3 = (h1 + 240) % 360;
             const r = document.documentElement;
-            r.style.setProperty('--accent',        `hsl(${h1},100%,65%)`);
+            r.style.setProperty('--accent', `hsl(${h1},100%,65%)`);
             r.style.setProperty('--accent-border', `hsla(${h1},100%,65%,0.4)`);
             r.style.setProperty('--accent-blight', `hsla(${h1},100%,65%,0.25)`);
-            r.style.setProperty('--accent-glow',   `hsla(${h1},100%,65%,0.2)`);
+            r.style.setProperty('--accent-glow', `hsla(${h1},100%,65%,0.2)`);
             r.style.setProperty('--accent-shadow', `hsla(${h1},100%,65%,0.6)`);
-            r.style.setProperty('--accent-bg',     `hsla(${h1},80%,20%,0.4)`);
-            r.style.setProperty('--accent-bg2',    `hsla(${h1},80%,15%,0.55)`);
-            r.style.setProperty('--accent-bg3',    `hsla(${h1},80%,8%,0.9)`);
-            r.style.setProperty('--border-app',    `hsla(${h1},100%,60%,0.2)`);
-            r.style.setProperty('--border-sub',    `hsla(${h1},100%,60%,0.1)`);
-            r.style.setProperty('--border-ctrl',   `hsla(${h1},100%,60%,0.3)`);
-            r.style.setProperty('--border-modal',  `hsla(${h1},100%,60%,0.25)`);
-            r.style.setProperty('--ctrl-bg',       `hsla(${h1},100%,60%,0.08)`);
-            r.style.setProperty('--ctrl-hover',    `hsla(${h1},100%,60%,0.18)`);
-            r.style.setProperty('--knob-dot',      `hsl(${h1},100%,70%)`);
-            r.style.setProperty('--knob-ring',     `hsla(${h1},100%,65%,0.4)`);
-            r.style.setProperty('--text-heading',  `hsl(${h1},100%,75%)`);
-            r.style.setProperty('--text-dim',      `hsl(${h1},60%,45%)`);
-            r.style.setProperty('--text-muted',    `hsl(${h1},55%,35%)`);
-            r.style.setProperty('--hk-color',      `hsl(${h1},100%,65%)`);
-            r.style.setProperty('--mod-bg',        `hsla(${h1},60%,12%,0.55)`);
-            r.style.setProperty('--mod-border',    `hsla(${h1},100%,60%,0.2)`);
-            r.style.setProperty('--mod-grip-t',    `hsl(${h1},60%,30%)`);
-            r.style.setProperty('--mod-grip-b',    `hsl(${h1},60%,15%)`);
-            r.style.setProperty('--mod-grip-bdr',  `hsla(${h1},100%,65%,0.4)`);
+            r.style.setProperty('--accent-bg', `hsla(${h1},80%,20%,0.4)`);
+            r.style.setProperty('--accent-bg2', `hsla(${h1},80%,15%,0.55)`);
+            r.style.setProperty('--accent-bg3', `hsla(${h1},80%,8%,0.9)`);
+            r.style.setProperty('--border-app', `hsla(${h1},100%,60%,0.2)`);
+            r.style.setProperty('--border-sub', `hsla(${h1},100%,60%,0.1)`);
+            r.style.setProperty('--border-ctrl', `hsla(${h1},100%,60%,0.3)`);
+            r.style.setProperty('--border-modal', `hsla(${h1},100%,60%,0.25)`);
+            r.style.setProperty('--ctrl-bg', `hsla(${h1},100%,60%,0.08)`);
+            r.style.setProperty('--ctrl-hover', `hsla(${h1},100%,60%,0.18)`);
+            r.style.setProperty('--knob-dot', `hsl(${h1},100%,70%)`);
+            r.style.setProperty('--knob-ring', `hsla(${h1},100%,65%,0.4)`);
+            r.style.setProperty('--text-heading', `hsl(${h1},100%,75%)`);
+            r.style.setProperty('--text-dim', `hsl(${h1},60%,45%)`);
+            r.style.setProperty('--text-muted', `hsl(${h1},55%,35%)`);
+            r.style.setProperty('--hk-color', `hsl(${h1},100%,65%)`);
+            r.style.setProperty('--mod-bg', `hsla(${h1},60%,12%,0.55)`);
+            r.style.setProperty('--mod-border', `hsla(${h1},100%,60%,0.2)`);
+            r.style.setProperty('--mod-grip-t', `hsl(${h1},60%,30%)`);
+            r.style.setProperty('--mod-grip-b', `hsl(${h1},60%,15%)`);
+            r.style.setProperty('--mod-grip-bdr', `hsla(${h1},100%,65%,0.4)`);
             kbNeedsRender = true;
         }
         if (!kbNeedsRender) return;
@@ -340,7 +467,7 @@ function initKeyboard3D() {
 }
 
 function buildKeys3D() {
-    // Remove and dispose old meshes
+    // Remove and dispose old key meshes only
     for (const mesh of Object.values(noteToMesh)) {
         kbScene.remove(mesh);
         mesh.geometry.dispose();
@@ -348,18 +475,21 @@ function buildKeys3D() {
     Object.keys(noteToMesh).forEach(k => delete noteToMesh[k]);
     meshToMidi.clear();
 
-    const totalOctaves = 2;
-    const totalWhite = totalOctaves * 7;
+    // Show DISPLAY_OCTAVES octaves centred on the active pair
+    const displayStart = Math.max(0, Math.min(9 - DISPLAY_OCTAVES, baseOctave - 1));
+    const totalWhite = DISPLAY_OCTAVES * 7;
     const totalW = totalWhite * (WKW + KEY_GAP);
-    const startX = -totalW / 2 + (WKW + KEY_GAP) / 2;
+    const startX = KEY_OFFSET_X - totalW / 2 + (WKW + KEY_GAP) / 2;
 
-    // White keys — shared geometry, shared material
-    const whiteGeo = new RoundedBoxGeometry(WKW, WKH, WKD, 3, 0.055);
-    for (let oct = 0; oct < totalOctaves; oct++) {
+    // White keys
+    const whiteGeo = new RoundedBoxGeometry(WKW, WKH, WKD, 3, 0.04);
+    for (let oct = 0; oct < DISPLAY_OCTAVES; oct++) {
+        const octNum = displayStart + oct;
+        const active = octNum === baseOctave || octNum === baseOctave + 1;
         for (let i = 0; i < WHITE_OFFSETS.length; i++) {
-            const midi = (baseOctave + oct) * 12 + 12 + WHITE_OFFSETS[i];
+            const midi = octNum * 12 + 12 + WHITE_OFFSETS[i];
             const x = startX + (oct * 7 + i) * (WKW + KEY_GAP);
-            const mesh = new THREE.Mesh(whiteGeo, matWhite);
+            const mesh = new THREE.Mesh(whiteGeo, active ? matWhite : matWhiteDim);
             mesh.position.set(x, 0, 0);
             mesh.castShadow = true;
             mesh.receiveShadow = true;
@@ -370,15 +500,17 @@ function buildKeys3D() {
         }
     }
 
-    // Black keys — shared geometry, shared material
-    const blackGeo = new RoundedBoxGeometry(BKW, BKH, BKD, 3, 0.055);
+    // Black keys
+    const blackGeo = new RoundedBoxGeometry(BKW, BKH, BKD, 3, 0.04);
     const blackY = (WKH + BKH) / 2;
     const blackZ = -(WKD - BKD) / 2;
-    for (let oct = 0; oct < totalOctaves; oct++) {
+    for (let oct = 0; oct < DISPLAY_OCTAVES; oct++) {
+        const octNum = displayStart + oct;
+        const active = octNum === baseOctave || octNum === baseOctave + 1;
         for (const bk of BLACK_KEY_DEFS) {
-            const midi = (baseOctave + oct) * 12 + 12 + bk.semitone;
+            const midi = octNum * 12 + 12 + bk.semitone;
             const x = startX + (oct * 7 + bk.whitePos) * (WKW + KEY_GAP);
-            const mesh = new THREE.Mesh(blackGeo, matBlack);
+            const mesh = new THREE.Mesh(blackGeo, active ? matBlack : matBlackDim);
             mesh.position.set(x, blackY, blackZ);
             mesh.castShadow = true;
             mesh.receiveShadow = true;
@@ -456,113 +588,10 @@ async function triggerNoteOff(midi) {
     }
 }
 
-// ── 3D Mod Wheel ──────────────────────────────────────────────────────────────
-let modWheelRenderer, modWheelScene, modWheelCamera, modWheelSpinner, modWheelTabMat;
-
-function initModWheel3D() {
-    const canvas = document.getElementById("mod-wheel-canvas");
-    const wrap   = document.getElementById("mod-wheel-wrap");
-    const W = wrap.clientWidth  || 44;
-    const H = wrap.clientHeight || 150;
-
-    modWheelRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-    modWheelRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    modWheelRenderer.setSize(W, H, false);
-
-    modWheelScene  = new THREE.Scene();
-    modWheelCamera = new THREE.PerspectiveCamera(40, W / H, 0.1, 100);
-    modWheelCamera.position.set(0.5, 0.3, 3.0);
-    modWheelCamera.lookAt(0, 0, 0);
-
-    modWheelScene.add(new THREE.AmbientLight(0xffffff, 0.55));
-    const key = new THREE.DirectionalLight(0xffffff, 1.1);
-    key.position.set(1, 2, 3);
-    modWheelScene.add(key);
-    const rim2 = new THREE.DirectionalLight(0x4488ff, 0.35);
-    rim2.position.set(-2, -1, -2);
-    modWheelScene.add(rim2);
-
-    modWheelSpinner = new THREE.Group();
-    modWheelScene.add(modWheelSpinner);
-
-    // Wheel body — cylinder with axis along X (rotateZ π/2 bakes the orientation)
-    const bodyGeo = new THREE.CylinderGeometry(0.55, 0.55, 0.32, 20);
-    bodyGeo.rotateZ(Math.PI / 2);
-    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x1c1c1c, roughness: 0.6, metalness: 0.3 });
-    modWheelSpinner.add(new THREE.Mesh(bodyGeo, bodyMat));
-
-    // Grip ridges along the wheel width
-    const ridgeMat = new THREE.MeshStandardMaterial({ color: 0x303030, roughness: 0.9, metalness: 0.05 });
-    [-0.10, -0.03, 0.04, 0.11].forEach(x => {
-        const rGeo = new THREE.CylinderGeometry(0.585, 0.585, 0.028, 20);
-        rGeo.rotateZ(Math.PI / 2);
-        const r = new THREE.Mesh(rGeo, ridgeMat);
-        r.position.x = x;
-        modWheelSpinner.add(r);
-    });
-
-    // Finger tab — protruding pad on the rim for push/pull
-    const tabCol = parseCssColorToHex("--knob-dot");
-    modWheelTabMat = new THREE.MeshStandardMaterial({
-        color: tabCol, emissive: tabCol, emissiveIntensity: 0.35,
-        roughness: 0.45, metalness: 0.15,
-    });
-    const tabGeo = new THREE.BoxGeometry(0.29, 0.13, 0.15);
-    const tab = new THREE.Mesh(tabGeo, modWheelTabMat);
-    tab.position.y = 0.62;
-    modWheelSpinner.add(tab);
-
-    // Thin accent line on the tab face
-    const lineGeo = new THREE.BoxGeometry(0.29, 0.018, 0.018);
-    const lineMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.9 });
-    const line = new THREE.Mesh(lineGeo, lineMat);
-    line.position.set(0, 0.62, 0.083);
-    modWheelSpinner.add(line);
-
-    renderModWheel3D();
-
-    canvas.addEventListener("mousedown", (e) => {
-        e.preventDefault();
-        const startY   = e.clientY;
-        const startVal = modValue;
-        function onMove(ev) {
-            const dy = startY - ev.clientY;
-            modValue = Math.max(-127, Math.min(127, startVal + Math.round(dy * 127 / 35)));
-            renderModWheel3D();
-            const midiValue = Math.round((modValue + 127) / 2);
-            if (connected) invoke("send_cc", { channel, cc: 1, value: midiValue }).catch(() => {});
-        }
-        function onUp() {
-            document.removeEventListener("mousemove", onMove);
-            document.removeEventListener("mouseup",   onUp);
-        }
-        document.addEventListener("mousemove", onMove);
-        document.addEventListener("mouseup",   onUp);
-    });
-}
-
-function renderModWheel3D() {
-    if (!modWheelRenderer) return;
-    modWheelSpinner.rotation.x = -(modValue / 127) * (Math.PI * 0.65);
-    modWheelRenderer.render(modWheelScene, modWheelCamera);
-    modValEl.textContent = modValue;
-}
-
-// ── Draggable LCD controls ────────────────────────────────────────────────────
-const velDisplay  = document.getElementById("vel-display");
-const panDisplay  = document.getElementById("pan-display");
-const exprDisplay = document.getElementById("expr-display");
-const revDisplay  = document.getElementById("rev-display");
-const choDisplay  = document.getElementById("cho-display");
-
 // ── Knob rotation helper ───────────────────────────────────────────────────────
 function knobRotation(value, min, max) {
     return -135 + ((value - min) / (max - min)) * 270;
 }
-
-// ── 3D Knob rendering ─────────────────────────────────────────────────────────
-const knob3DMap = new WeakMap();
-const allKnob3DData = [];
 
 function parseCssColorToHex(varName) {
     const str = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
@@ -574,137 +603,100 @@ function parseCssColorToHex(varName) {
     return 0x7ab4ff;
 }
 
-function refreshKnob3DColors() {
-    const col = parseCssColorToHex('--knob-dot');
-    for (const data of allKnob3DData) {
-        data.pipMat.color.setHex(col);
-        data.pipMat.emissive.setHex(col);
-        data.pipMat.needsUpdate = true;
-        data.renderer.render(data.scene, data.camera);
+// ── In-scene mod wheel + knobs ────────────────────────────────────────────────
+function initSceneControls() {
+    const totalKeyW = DISPLAY_OCTAVES * 7 * (WKW + KEY_GAP);
+    const keyLeftEdge = KEY_OFFSET_X - totalKeyW / 2;
+    const panelCX = keyLeftEdge - 0.35 - 0.55 / 2;  // wheel snug left of keys
+
+
+    // ── Mod wheel ────────────────────────────────────────────────────────────
+    // Deep-set wheel: center below body surface, only ridged top arc exposed
+    const modWheelY = -0.4;
+    const wheelR = 1.15;   // large radius matching reference controller
+    const wheelW = 0.55;   // width along rotation axis
+
+    kbModWheelSpinner = new THREE.Group();
+
+    // Main wheel cylinder
+    const modBodyGeo = new THREE.CylinderGeometry(wheelR, wheelR, wheelW, 36);
+    modBodyGeo.rotateZ(Math.PI / 2);
+    kbModWheelSpinner.add(new THREE.Mesh(modBodyGeo,
+        new THREE.MeshStandardMaterial({ color: 0x111114, roughness: 0.70, metalness: 0.18 })
+    ));
+
+    // 11 pronounced horizontal ribs across the width (like the reference photo)
+    const ridgeMat = new THREE.MeshStandardMaterial({ color: 0x0c0c0e, roughness: 0.88, metalness: 0.05 });
+    const ridgeCount = 11;
+    const ridgeStep = wheelW / (ridgeCount + 1);
+    for (let i = 0; i < ridgeCount; i++) {
+        const rGeo = new THREE.CylinderGeometry(wheelR + 0.10, wheelR + 0.10, 0.038, 36);
+        rGeo.rotateZ(Math.PI / 2);
+        const r = new THREE.Mesh(rGeo, ridgeMat);
+        r.position.x = -wheelW / 2 + ridgeStep * (i + 1);
+        kbModWheelSpinner.add(r);
     }
+
+    kbModWheelSpinner.position.set(panelCX, modWheelY, 0);
+    kbScene.add(kbModWheelSpinner);
+
+    // Invisible hitbox covering the exposed top arc
+    kbModWheelHitbox = new THREE.Mesh(
+        new THREE.BoxGeometry(wheelW + 0.2, 1.4, 1.4),
+        new THREE.MeshStandardMaterial({ visible: false })
+    );
+    kbModWheelHitbox.position.set(panelCX, modWheelY + 0.5, 0);
+    kbModWheelHitbox.userData = { type: 'modwheel' };
+    kbScene.add(kbModWheelHitbox);
+
+    // ── 5 Knobs — sit on top of the raised head slab ─────────────────────────
+    const knobBaseZ = -(BODY_D / 2 - HEAD_D / 2);          // centre of head slab
+    const headTopY = -WKH / 2 + HEAD_H;                   // top surface of head
+    const knobY = headTopY + 0.12;                      // just above head surface
+    const knobSpanX = 5;
+    const knobStartX = KEY_OFFSET_X - knobSpanX / 2;
+
+    for (let i = 0; i < SCENE_KNOBS.length; i++) {
+        const kd = SCENE_KNOBS[i];
+        const kx = knobStartX + i * (knobSpanX / (SCENE_KNOBS.length - 1));
+
+        const bodyGeo = new THREE.CylinderGeometry(0.42, 0.50, 0.20, 32);
+        const bodyMat = new THREE.MeshStandardMaterial({ color: 0x282828, roughness: 0.28, metalness: 0.65 });
+        const body = new THREE.Mesh(bodyGeo, bodyMat);
+
+        const capGeo = new THREE.CylinderGeometry(0.41, 0.42, 0.018, 32);
+        const capMat = new THREE.MeshStandardMaterial({ color: 0x3c3c3c, roughness: 0.18, metalness: 0.75 });
+        const cap = new THREE.Mesh(capGeo, capMat);
+        cap.position.y = 0.11;
+        body.add(cap);
+
+        const pipCol = parseCssColorToHex('--knob-dot');
+        const pipMat = new THREE.MeshStandardMaterial({
+            color: pipCol, emissive: pipCol, emissiveIntensity: 0.6,
+            roughness: 0.1, metalness: 0.1,
+        });
+        const pip = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.04, 10), pipMat);
+        pip.position.set(0, 0.13, -0.27);
+        body.add(pip);
+
+        body.position.set(kx, knobY, knobBaseZ);
+        body.userData = { type: 'knob', knobIndex: i };
+        // Apply initial rotation
+        const initRot = knobRotation(kd.value, kd.min, kd.max);
+        body.rotation.y = -initRot * Math.PI / 180;
+
+        kbScene.add(body);
+        kbKnobBodies.push(body);
+    }
+
+    updateSceneModWheel();
 }
 
-function initKnob3D(canvasEl) {
-    const CSS_SIZE = 36;
-    canvasEl.style.width = CSS_SIZE + 'px';
-    canvasEl.style.height = CSS_SIZE + 'px';
-
-    const renderer = new THREE.WebGLRenderer({ canvas: canvasEl, antialias: true, alpha: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setSize(CSS_SIZE, CSS_SIZE);
-
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 100);
-    camera.position.set(0, 4.2, 1.5);
-    camera.lookAt(0, 0, 0);
-
-    const ambient = new THREE.AmbientLight(0xffffff, 0.50);
-    const keyLight = new THREE.DirectionalLight(0xffffff, 1.1);
-    keyLight.position.set(2, 4, 2);
-    const rimLight = new THREE.DirectionalLight(0x4466cc, 0.35);
-    rimLight.position.set(-1.5, 2, -2);
-    scene.add(ambient, keyLight, rimLight);
-
-    const bodyGeo = new THREE.CylinderGeometry(0.60, 0.70, 0.28, 32);
-    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x282828, roughness: 0.28, metalness: 0.65 });
-    const body = new THREE.Mesh(bodyGeo, bodyMat);
-    scene.add(body);
-
-    const capGeo = new THREE.CylinderGeometry(0.59, 0.60, 0.025, 32);
-    const capMat = new THREE.MeshStandardMaterial({ color: 0x3c3c3c, roughness: 0.18, metalness: 0.75 });
-    const cap = new THREE.Mesh(capGeo, capMat);
-    cap.position.y = 0.15;
-    scene.add(cap);
-
-    const pipGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.055, 10);
-    const pipCol = parseCssColorToHex('--knob-dot');
-    const pipMat = new THREE.MeshStandardMaterial({
-        color: pipCol, emissive: pipCol, emissiveIntensity: 0.55,
-        roughness: 0.1, metalness: 0.1,
-    });
-    const pip = new THREE.Mesh(pipGeo, pipMat);
-    pip.position.set(0, 0.19, -0.38);
-    body.add(pip);
-
-    const data = { renderer, scene, camera, body, pipMat };
-    knob3DMap.set(canvasEl, data);
-    allKnob3DData.push(data);
-    return data;
+function updateSceneModWheel() {
+    if (!kbModWheelSpinner) return;
+    kbModWheelSpinner.rotation.x = -(modValue / 127) * (Math.PI * 0.65);
+    kbNeedsRender = true;
 }
-
-function setKnob3DAngle(knobEl, value) {
-    const data = knob3DMap.get(knobEl);
-    if (!data) return;
-    const min = parseInt(knobEl.dataset.min);
-    const max = parseInt(knobEl.dataset.max);
-    data.body.rotation.y = -knobRotation(value, min, max) * Math.PI / 180;
-    data.renderer.render(data.scene, data.camera);
-}
-
-function initKnob(knobEl) {
-    initKnob3D(knobEl);
-    setKnob3DAngle(knobEl, parseInt(knobEl.dataset.value));
-}
-
-function makeDraggableLCD(el, min, max, get, set, pxPerUnit = 1) {
-    el.addEventListener("mousedown", (e) => {
-        e.preventDefault();
-        const startY   = e.clientY;
-        const startVal = get();
-        function onMove(ev) {
-            const newVal = Math.max(min, Math.min(max, Math.round(startVal + (startY - ev.clientY) / pxPerUnit)));
-            if (newVal !== get()) { set(newVal); el.textContent = newVal; }
-        }
-        function onUp() {
-            document.removeEventListener("mousemove", onMove);
-            document.removeEventListener("mouseup",   onUp);
-        }
-        document.addEventListener("mousemove", onMove);
-        document.addEventListener("mouseup",   onUp);
-    });
-}
-
-makeDraggableLCD(octaveDisplay, 0, 8, () => baseOctave, (v) => { baseOctave = v; buildKeys3D(); }, 12);
-
-// ── 3D knob drag ──────────────────────────────────────────────────────────────
-function makeKnob3DDraggable(knobEl, valEl, lcdEl, onChange) {
-    const min = parseInt(knobEl.dataset.min);
-    const max = parseInt(knobEl.dataset.max);
-    knobEl.addEventListener("mousedown", (e) => {
-        e.preventDefault();
-        const startY   = e.clientY;
-        const startVal = parseInt(knobEl.dataset.value);
-        function onMove(ev) {
-            const newVal = Math.max(min, Math.min(max, Math.round(startVal + (startY - ev.clientY) * (max - min) / 100)));
-            if (newVal === parseInt(knobEl.dataset.value)) return;
-            knobEl.dataset.value = newVal;
-            setKnob3DAngle(knobEl, newVal);
-            valEl.textContent = newVal;
-            if (lcdEl) lcdEl.textContent = newVal;
-            onChange(newVal);
-        }
-        function onUp() {
-            document.removeEventListener("mousemove", onMove);
-            document.removeEventListener("mouseup",   onUp);
-        }
-        document.addEventListener("mousemove", onMove);
-        document.addEventListener("mouseup",   onUp);
-    });
-}
-
-const knobVel  = document.getElementById("knob-vel");
-const knobPan  = document.getElementById("knob-pan");
-const knobExpr = document.getElementById("knob-expr");
-const knobRev  = document.getElementById("knob-rev");
-const knobCho  = document.getElementById("knob-cho");
-
-initKnob(knobVel);  initKnob(knobPan);  initKnob(knobExpr);  initKnob(knobRev);  initKnob(knobCho);
-
-makeKnob3DDraggable(knobVel,  document.getElementById("knob-vel-val"),  velDisplay,  (v) => { velocity  = v; });
-makeKnob3DDraggable(knobPan,  document.getElementById("knob-pan-val"),  panDisplay,  (v) => { if (connected) invoke("send_cc", { channel, cc: 10, value: v }).catch(() => {}); });
-makeKnob3DDraggable(knobExpr, document.getElementById("knob-expr-val"), exprDisplay, (v) => { if (connected) invoke("send_cc", { channel, cc: 11, value: v }).catch(() => {}); });
-makeKnob3DDraggable(knobRev,  document.getElementById("knob-rev-val"),  revDisplay,  (v) => { if (connected) invoke("send_cc", { channel, cc: 91, value: v }).catch(() => {}); });
-makeKnob3DDraggable(knobCho,  document.getElementById("knob-cho-val"),  choDisplay,  (v) => { if (connected) invoke("send_cc", { channel, cc: 93, value: v }).catch(() => {}); });
 
 // ── Keyboard events ───────────────────────────────────────────────────────────
 window.addEventListener("keydown", (e) => {
@@ -719,7 +711,6 @@ window.addEventListener("keydown", (e) => {
     if (/^F[1-9]$/.test(e.key) && !e.repeat) {
         e.preventDefault();
         baseOctave = parseInt(e.key.slice(1)) - 1;
-        octaveDisplay.textContent = baseOctave;
         buildKeys3D();
         return;
     }
@@ -759,7 +750,7 @@ window.addEventListener("keyup", (e) => {
 window.addEventListener("wheel", (e) => {
     e.preventDefault();
     modValue = Math.max(-127, Math.min(127, modValue - Math.sign(e.deltaY) * 18));
-    renderModWheel3D();
+    updateSceneModWheel();
     const midiValue = Math.round((modValue + 127) / 2);
     if (connected) invoke("send_cc", { channel, cc: 1, value: midiValue }).catch(() => { });
 }, { passive: false });
@@ -770,7 +761,7 @@ window.addEventListener("auxclick", (e) => {
     e.preventDefault();
     e.stopPropagation();
     modValue = 0;
-    renderModWheel3D();
+    updateSceneModWheel();
     if (connected) invoke("send_cc", { channel, cc: 1, value: 64 }).catch(() => { });
 });
 
@@ -779,7 +770,7 @@ window.addEventListener("blur", () => {
     if (connected) {
         invoke("send_cc", { channel, cc: 64, value: 0 }).catch(() => { });
         modValue = 0;
-        renderModWheel3D();
+        updateSceneModWheel();
         invoke("send_cc", { channel, cc: 1, value: 0 }).catch(() => { });
     }
     for (const key of heldKeys) {
@@ -907,7 +898,6 @@ async function correctAspectRatio() {
         const sf = await appWindow.scaleFactor();
         const logW = size.width / sf;
         const logH = size.height / sf;
-        const sidebarW = sidebar.offsetWidth;
         const vertOverhead = titlebar.offsetHeight;
         const RATIO = 14 / 3.6;
         const dW = Math.abs(logW - prevLogW);
@@ -917,11 +907,11 @@ async function correctAspectRatio() {
         if (dW >= dH) {
             // User dragged horizontally — correct height
             newW = logW;
-            newH = Math.round((logW - sidebarW) / RATIO + vertOverhead);
+            newH = Math.round(logW / RATIO + vertOverhead);
         } else {
             // User dragged vertically — correct width
             newH = logH;
-            newW = Math.round((logH - vertOverhead) * RATIO + sidebarW);
+            newW = Math.round((logH - vertOverhead) * RATIO);
         }
 
         prevLogW = newW;
@@ -1009,7 +999,6 @@ function applyTheme(name) {
     swatches.forEach(s => s.classList.toggle("active", s.dataset.theme === name));
     localStorage.setItem("theme", name);
     setThemeLighting(name);
-    refreshKnob3DColors();
 }
 
 swatches.forEach(s => s.addEventListener("click", () => {
@@ -1067,12 +1056,10 @@ function setStatus(msg, type = "") {
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
-octaveDisplay.textContent = baseOctave;
 appTitle.textContent = GM_PATCH_NAMES[patch];
 updateZoomDisplay();
 initKeyboard3D();
 setThemeLighting(localStorage.getItem("theme") || "default");
-initModWheel3D();
 
 appWindow.innerSize().then(s => appWindow.scaleFactor().then(sf => {
     prevLogW = s.width / sf;
@@ -1081,5 +1068,4 @@ appWindow.innerSize().then(s => appWindow.scaleFactor().then(sf => {
 
 new ResizeObserver(() => {
     resizeKeyboard3D();
-    renderModWheel3D();
 }).observe(keyboardContainer);

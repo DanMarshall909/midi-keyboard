@@ -31,97 +31,10 @@
         </div>
       </div>
 
-      <!-- ── Body: sidebar + main ── -->
-      <div class="flex flex-1 min-h-0">
-
-        <!-- Left sidebar: Oct + [Mod | pots] -->
-        <div id="sidebar" class="flex flex-col shrink-0 w-[108px] py-2 gap-1"
-             style="background:var(--bg-sidebar); border-right:1px solid var(--border-sub)">
-
-          <!-- MOD + pots side by side -->
-          <div class="flex flex-1 min-h-0 gap-1 px-2 py-1">
-
-            <!-- pots strip -->
-            <div class="flex flex-col justify-between flex-1 min-h-0">
-              <div class="flex items-center gap-1.5">
-                <span id="octave-display" style="cursor:ns-resize; min-width:30px">4</span>
-                <span class="text-[8px] uppercase tracking-wider" style="color:var(--text-muted)">Oct</span>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <span id="vel-display" class="lcd-val" style="cursor:ns-resize; min-width:30px">100</span>
-                <span class="text-[8px] uppercase tracking-wider" style="color:var(--text-muted)">Vel</span>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <span id="pan-display" class="lcd-val" style="cursor:ns-resize; min-width:30px">64</span>
-                <span class="text-[8px] uppercase tracking-wider" style="color:var(--text-muted)">Pan</span>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <span id="expr-display" class="lcd-val" style="cursor:ns-resize; min-width:30px">127</span>
-                <span class="text-[8px] uppercase tracking-wider" style="color:var(--text-muted)">Expr</span>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <span id="rev-display" class="lcd-val" style="cursor:ns-resize; min-width:30px">0</span>
-                <span class="text-[8px] uppercase tracking-wider" style="color:var(--text-muted)">Rev</span>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <span id="cho-display" class="lcd-val" style="cursor:ns-resize; min-width:30px">0</span>
-                <span class="text-[8px] uppercase tracking-wider" style="color:var(--text-muted)">Cho</span>
-              </div>
-            </div>
-
-            <!-- MOD wheel -->
-            <div class="flex flex-col items-center gap-1 shrink-0">
-              <span class="text-[8px] uppercase tracking-wider" style="color:var(--text-muted)">Mod</span>
-              <div id="mod-wheel-wrap" style="flex:1;min-height:0;width:44px;position:relative">
-                <canvas id="mod-wheel-canvas" style="position:absolute;inset:0;width:100%;height:100%;cursor:ns-resize"></canvas>
-              </div>
-              <span id="mod-val" class="lcd-val">0</span>
-            </div>
-
-          </div>
-
-        </div>
-
-        <!-- Right: knobs row + keyboard -->
-        <div class="flex flex-col flex-1 min-w-0 min-h-0">
-
-          <!-- Knobs row -->
-          <div id="knobs-row" class="flex items-center justify-center gap-6 px-4 py-1 shrink-0"
-               style="background:var(--bg-bar); border-bottom:1px solid var(--border-sub)">
-            <div class="flex flex-col items-center gap-1">
-              <span class="text-[9px] uppercase tracking-wider" style="color:var(--text-muted)">Vel</span>
-              <canvas class="knob" id="knob-vel" data-value="100" data-min="1" data-max="127"></canvas>
-              <span class="text-[10px]" id="knob-vel-val" style="color:var(--text-muted)">100</span>
-            </div>
-            <div class="flex flex-col items-center gap-1">
-              <span class="text-[9px] uppercase tracking-wider" style="color:var(--text-muted)">Pan</span>
-              <canvas class="knob" id="knob-pan" data-cc="10" data-value="64" data-min="0" data-max="127"></canvas>
-              <span class="text-[10px]" id="knob-pan-val" style="color:var(--text-muted)">64</span>
-            </div>
-            <div class="flex flex-col items-center gap-1">
-              <span class="text-[9px] uppercase tracking-wider" style="color:var(--text-muted)">Expr</span>
-              <canvas class="knob" id="knob-expr" data-cc="11" data-value="127" data-min="0" data-max="127"></canvas>
-              <span class="text-[10px]" id="knob-expr-val" style="color:var(--text-muted)">127</span>
-            </div>
-            <div class="flex flex-col items-center gap-1">
-              <span class="text-[9px] uppercase tracking-wider" style="color:var(--text-muted)">Rev</span>
-              <canvas class="knob" id="knob-rev" data-cc="91" data-value="0" data-min="0" data-max="127"></canvas>
-              <span class="text-[10px]" id="knob-rev-val" style="color:var(--text-muted)">0</span>
-            </div>
-            <div class="flex flex-col items-center gap-1">
-              <span class="text-[9px] uppercase tracking-wider" style="color:var(--text-muted)">Cho</span>
-              <canvas class="knob" id="knob-cho" data-cc="93" data-value="0" data-min="0" data-max="127"></canvas>
-              <span class="text-[10px]" id="knob-cho-val" style="color:var(--text-muted)">0</span>
-            </div>
-          </div>
-
-          <!-- Keyboard -->
-          <div id="keyboard-area" class="flex-1 min-h-0 flex flex-col">
-            <div id="keyboard-container" class="flex-1 overflow-hidden min-h-0">
-              <canvas id="keyboard-canvas" style="display:block;width:100%;height:100%"></canvas>
-            </div>
-          </div>
-
+      <!-- ── Body: full-width 3D canvas ── -->
+      <div class="flex-1 min-h-0" style="position:relative">
+        <div id="keyboard-container" style="width:100%;height:100%">
+          <canvas id="keyboard-canvas" style="display:block;width:100%;height:100%"></canvas>
         </div>
       </div>
 

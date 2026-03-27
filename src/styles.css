@@ -116,11 +116,8 @@ body {
 
 #app {
   width: 860px;
-  height: 280px;
-  background: var(--bg-app);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--border-app);
+  height: 360px;
+  background: transparent;
   border-radius: 10px;
   overflow: hidden;
   display: flex;
