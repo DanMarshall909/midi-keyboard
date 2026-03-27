@@ -279,7 +279,7 @@ function initKeyboard3D() {
     // Renderer
     kbRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
     kbRenderer.setClearColor(0x000000, 0);
-    kbRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 1));
+    kbRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     kbRenderer.shadowMap.enabled = true;
     kbRenderer.shadowMap.type = THREE.PCFShadowMap;
 
@@ -692,6 +692,45 @@ function parseCssColorToHex(varName) {
     return 0x7ab4ff;
 }
 
+function createControlLabel(text, width = 0.95, height = 0.24) {
+    const canvas = document.createElement("canvas");
+    canvas.width = 2048;
+    canvas.height = 512;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    ctx.font = "900 386px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 22;
+    ctx.strokeStyle = "rgba(0, 0, 0, 0.95)";
+    ctx.strokeText(text, canvas.width / 2, canvas.height / 2 + 6);
+    ctx.fillStyle = "#aaaaaa77";
+    ctx.fillText(text, canvas.width / 2, canvas.height / 2 + 6);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.generateMipmaps = false;
+    texture.anisotropy = 8;
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.needsUpdate = true;
+    const label = new THREE.Mesh(
+        new THREE.PlaneGeometry(width, height),
+        new THREE.MeshBasicMaterial({
+            map: texture,
+            transparent: true,
+            depthWrite: false,
+            side: THREE.DoubleSide,
+        })
+    );
+    label.rotation.x = -Math.PI / 2;
+    return label;
+}
+
 // ── In-scene mod wheel + knobs ────────────────────────────────────────────────
 function initSceneControls() {
     const totalKeyW = DISPLAY_OCTAVES * 7 * (WKW + KEY_GAP);
@@ -700,12 +739,12 @@ function initSceneControls() {
 
 
     // ── Shared wheel dimensions ───────────────────────────────────────────────
-    const modWheelY = -0.4;
+    const modWheelY = -0.52;
     const wheelR    = 1.15;
     const wheelW    = 0.55;
     const pitchCX   = panelCX - wheelW - 0.22;  // pitch wheel left of mod wheel
     const markerMat = new THREE.MeshStandardMaterial({
-        color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.3,
+        color: 0xaaaaaa, emissive: 0xaaaaaa, emissiveIntensity: 0.3,
         roughness: 0.1, metalness: 0.0,
     });
 
@@ -762,12 +801,22 @@ function initSceneControls() {
     kbModWheelSpinner = modWheelObj.spinner;
     kbModWheelHitbox  = modWheelObj.hitbox;
     kbModWheelHitbox.userData = { type: 'modwheel' };
+    const modLabel = createControlLabel("MOD", 0.98, 0.26);
+    if (modLabel) {
+        modLabel.position.set(panelCX, -WKH / 2 + 0.012, 1.45);
+        kbScene.add(modLabel);
+    }
 
     // ── Pitch wheel (pitch bend — springs to centre on release) ───────────────
     const pitchWheelObj = buildWheel(pitchCX);
     kbPitchWheelSpinner = pitchWheelObj.spinner;
     kbPitchWheelHitbox  = pitchWheelObj.hitbox;
     kbPitchWheelHitbox.userData = { type: 'pitchwheel' };
+    const pitchLabel = createControlLabel("PITCH", 1.3, 0.26);
+    if (pitchLabel) {
+        pitchLabel.position.set(pitchCX, -WKH / 2 + 0.012, 1.45);
+        kbScene.add(pitchLabel);
+    }
 
     // ── 5 Knobs — sit on top of the raised head slab ─────────────────────────
     const knobBaseZ = -(BODY_D / 2 - HEAD_D / 2);          // centre of head slab
@@ -807,6 +856,12 @@ function initSceneControls() {
 
         kbScene.add(body);
         kbKnobBodies.push(body);
+
+        const knobLabel = createControlLabel(kd.label, 0.9, 0.24);
+        if (knobLabel) {
+            knobLabel.position.set(kx, headTopY + 0.012, knobBaseZ + 0.62);
+            kbScene.add(knobLabel);
+        }
     }
 
     updateSceneModWheel();
