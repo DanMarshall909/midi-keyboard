@@ -237,7 +237,7 @@ function initKeyboard3D() {
     kbCamera = new THREE.PerspectiveCamera(24, w / h, 0.1, 100);
     const xOffset = 2.15; // slight right offset looks better with mod wheel on left
     kbCamera.position.set(xOffset, 13, 12);
-    kbCamera.lookAt(xOffset, -2, -0.25);
+    kbCamera.lookAt(xOffset, 0, -2.5);
     kbRenderer.setSize(w, h);
 
     // Lighting
