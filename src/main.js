@@ -237,7 +237,7 @@ function initKeyboard3D() {
     kbCamera = new THREE.PerspectiveCamera(24, w / h, 0.1, 100);
     const xOffset = 2.15; // slight right offset looks better with mod wheel on left
     kbCamera.position.set(xOffset, 13, 12);
-    kbCamera.lookAt(xOffset, 0, -0.25);
+    kbCamera.lookAt(xOffset, -2, -0.25);
     kbRenderer.setSize(w, h);
 
     // Lighting
@@ -670,10 +670,13 @@ function initSceneControls() {
             r.position.x = -wheelW / 2 + ridgeStep * (i + 1);
             spinner.add(r);
         }
-        // Bright center-marker stripe at 12 o'clock (top of wheel, zero position)
-        const stripGeo = new THREE.CylinderGeometry(wheelR + 0.12, wheelR + 0.12, 0.06, 36);
-        stripGeo.rotateZ(Math.PI / 2);
-        spinner.add(new THREE.Mesh(stripGeo, markerMat));
+        // Bright horizontal marker at 12 o'clock — box spans wheel width along X
+        const strip = new THREE.Mesh(
+            new THREE.BoxGeometry(wheelW + 0.02, 0.07, 0.09),
+            markerMat
+        );
+        strip.position.set(0, wheelR + 0.04, 0);
+        spinner.add(strip);
 
         spinner.position.set(cx, modWheelY, 0);
         kbScene.add(spinner);
