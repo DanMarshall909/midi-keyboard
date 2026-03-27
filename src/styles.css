@@ -289,43 +289,10 @@ button:hover { background: var(--ctrl-hover); }
 
 /* ── Knob ────────────────────────────────────────────────────────────────────*/
 .knob {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: 1px solid rgba(255,255,255,0.14);
-  box-shadow: 0 2px 5px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08);
+  display: block;
+  width: 36px;
+  height: 36px;
   cursor: ns-resize;
-  position: relative;
-  transition: box-shadow 80ms;
-  background: transparent;
-  transform: rotate(var(--knob-rot, -135deg));
-}
-
-.knob:hover {
-  box-shadow: 0 2px 5px rgba(0,0,0,0.6), 0 0 0 1px var(--knob-ring), inset 0 1px 0 rgba(255,255,255,0.08);
-}
-
-.knob::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: radial-gradient(circle at 38% 35%, #4a4a4a, #1a1a1a 70%);
-  pointer-events: none;
-  transform: rotate(calc(var(--knob-rot, -135deg) * -1));
-}
-
-.knob::after {
-  content: '';
-  position: absolute;
-  top: 3px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 2.25px;
-  height: 6.75px;
-  background: var(--knob-dot);
-  border-radius: 1.5px;
-  z-index: 2;
 }
 
 /* ── Mod wheel ───────────────────────────────────────────────────────────────*/
