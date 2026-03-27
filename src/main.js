@@ -94,6 +94,7 @@ let arrowCcValue = 64;
 let modValue = 0;
 let pitchValue = 0;   // -127 to +127, springs back to 0 on release
 const heldKeys = new Set();
+const heldKeyNotes = new Map();   // key → midi note that was triggered on keydown
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 const appTitle = document.getElementById("app-title");
@@ -145,8 +146,6 @@ const kbKnobBodies = [];   // THREE.Mesh per knob (for raycasting + rotation)
 // Shared materials — no per-key cloning
 const matWhite = new THREE.MeshStandardMaterial({ color: 0xf0f0eb, roughness: 0.35, metalness: 0.0 });
 const matBlack = new THREE.MeshStandardMaterial({ color: 0x1c1c1c, roughness: 0.20, metalness: 0.05 });
-const matWhiteDim = new THREE.MeshStandardMaterial({ color: 0xb0b0a8, roughness: 0.50, metalness: 0.0 });
-const matBlackDim = new THREE.MeshStandardMaterial({ color: 0x282828, roughness: 0.30, metalness: 0.05 });
 const matHousing = new THREE.MeshStandardMaterial({ color: 0x3a3a3e, roughness: 0.78, metalness: 0.04 });
 
 const noteToMesh = {};
@@ -518,11 +517,10 @@ function buildKeys3D() {
     const whiteGeo = new RoundedBoxGeometry(WKW, WKH, WKD, 3, 0.04);
     for (let oct = 0; oct < DISPLAY_OCTAVES; oct++) {
         const octNum = displayStart + oct;
-        const active = octNum === baseOctave || octNum === baseOctave + 1;
         for (let i = 0; i < WHITE_OFFSETS.length; i++) {
             const midi = octNum * 12 + 12 + WHITE_OFFSETS[i];
             const x = startX + (oct * 7 + i) * (WKW + KEY_GAP);
-            const mesh = new THREE.Mesh(whiteGeo, active ? matWhite : matWhiteDim);
+            const mesh = new THREE.Mesh(whiteGeo, matWhite);
             mesh.position.set(x, 0, 0);
             mesh.castShadow = true;
             mesh.receiveShadow = true;
@@ -539,11 +537,10 @@ function buildKeys3D() {
     const blackZ = -(WKD - BKD) / 2;
     for (let oct = 0; oct < DISPLAY_OCTAVES; oct++) {
         const octNum = displayStart + oct;
-        const active = octNum === baseOctave || octNum === baseOctave + 1;
         for (const bk of BLACK_KEY_DEFS) {
             const midi = octNum * 12 + 12 + bk.semitone;
             const x = startX + (oct * 7 + bk.whitePos) * (WKW + KEY_GAP);
-            const mesh = new THREE.Mesh(blackGeo, active ? matBlack : matBlackDim);
+            const mesh = new THREE.Mesh(blackGeo, matBlack);
             mesh.position.set(x, blackY, blackZ);
             mesh.castShadow = true;
             mesh.receiveShadow = true;
@@ -800,6 +797,7 @@ window.addEventListener("keydown", (e) => {
     if (midi === null) return;
     e.preventDefault();
     heldKeys.add(key);
+    heldKeyNotes.set(key, midi);
     triggerNoteOn(midi);
 });
 
@@ -810,8 +808,9 @@ window.addEventListener("keyup", (e) => {
     }
     const key = e.key.toLowerCase();
     heldKeys.delete(key);
-    const midi = midiNoteFromKey(key);
-    if (midi === null) return;
+    const midi = heldKeyNotes.get(key);
+    heldKeyNotes.delete(key);
+    if (midi === undefined) return;
     e.preventDefault();
     triggerNoteOff(midi);
 });
@@ -843,11 +842,9 @@ window.addEventListener("blur", () => {
         updateSceneModWheel();
         invoke("send_cc", { channel, cc: 1, value: 0 }).catch(() => { });
     }
-    for (const key of heldKeys) {
-        const midi = midiNoteFromKey(key);
-        if (midi !== null) triggerNoteOff(midi);
-    }
+    for (const midi of heldKeyNotes.values()) triggerNoteOff(midi);
     heldKeys.clear();
+    heldKeyNotes.clear();
 });
 
 // ── Port management ───────────────────────────────────────────────────────────
