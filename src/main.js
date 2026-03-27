@@ -98,9 +98,8 @@ const heldKeys = new Set();
 const appTitle = document.getElementById("app-title");
 const portSelect = document.getElementById("port-select");
 const refreshBtn = document.getElementById("refresh-btn");
-const octaveDisplay = document.getElementById("octave-display");
-const octDownBtn = document.getElementById("oct-down");
-const octUpBtn = document.getElementById("oct-up");
+const octUpCanvas = document.getElementById("oct-up-canvas");
+const octDownCanvas = document.getElementById("oct-down-canvas");
 const channelSelect = document.getElementById("channel-select");
 const patchSelect = document.getElementById("patch-select");
 const statusEl = document.getElementById("status");
@@ -109,9 +108,6 @@ const keyboardContainer = document.getElementById("keyboard-container");
 const titlebar = document.getElementById("titlebar");
 const knobsRow = document.getElementById("knobs-row");
 const sidebar = document.getElementById("sidebar");
-const modTrack = document.getElementById("mod-track");
-const modFill = document.getElementById("mod-fill");
-const modGrip = document.getElementById("mod-grip");
 const modValEl = document.getElementById("mod-val");
 
 // ── 3D Keyboard ───────────────────────────────────────────────────────────────
@@ -462,56 +458,286 @@ async function triggerNoteOff(midi) {
     }
 }
 
-// ── Mod wheel (centered, ±127 range) ──────────────────────────────────────────
-function updateModWheel() {
-    const trackH = modTrack.clientHeight || 80;  // fallback to default height if layout not ready
-    const gripH = 18;
+// ── 3D Mod Wheel (Vertical Fader) ────────────────────────────────────────────
+let modScene3D, modCamera3D, modRenderer3D, modGrip3D;
+let modNeedsRender = true;
+let modStripeMat3D, modMarkMat3D;
 
-    // Center position for value 0
-    const centerPos = (trackH - gripH) / 2;
+const MOD_W = 44;
+// MOD_H and MOD_HALF_W/H are derived once the canvas is sized
+let modH = 140, modHalfH = 1.93, modGripRange = 1.46;
 
-    if (modValue >= 0) {
-        // Positive: fill upward from center
-        const fillHeight = (modValue / 127) * centerPos;
-        modFill.style.height = `${fillHeight}px`;
-        modFill.style.bottom = `${centerPos}px`;
-    } else {
-        // Negative: fill downward from center
-        const fillHeight = (-modValue / 127) * centerPos;
-        modFill.style.height = `${fillHeight}px`;
-        modFill.style.bottom = "0";
-    }
+function initMod3D() {
+    const canvas = document.getElementById("mod-canvas");
+    const wrap = document.getElementById("mod-canvas-wrap");
 
-    // Grip position (centered at 0, extends ±127)
-    const gripPos = centerPos + (modValue / 127) * centerPos;
-    modGrip.style.bottom = `${Math.max(0, Math.min(trackH - gripH, gripPos))}px`;
-    modValEl.textContent = modValue;
+    // Size canvas to fill the wrapper
+    modH = wrap.clientHeight || 140;
+    modRenderer3D = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    modRenderer3D.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    modRenderer3D.setSize(MOD_W, modH);
+
+    modScene3D = new THREE.Scene();
+
+    // OrthographicCamera: 44px wide → halfW=0.65, aspect → halfH
+    const halfW = 0.65;
+    modHalfH = halfW * modH / MOD_W;
+    modGripRange = modHalfH * 0.74;
+
+    modCamera3D = new THREE.OrthographicCamera(-halfW, halfW, modHalfH, -modHalfH, 0.1, 40);
+    modCamera3D.position.set(0.28, 0, 8);
+    modCamera3D.lookAt(0, 0, 0);
+
+    // Lighting
+    const ambient = new THREE.AmbientLight(0xffffff, 0.45);
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.1);
+    keyLight.position.set(2, 4, 4);
+    const rimLight = new THREE.DirectionalLight(0x4466cc, 0.42);
+    rimLight.position.set(-1.5, 2, -3);
+    modScene3D.add(ambient, keyLight, rimLight);
+
+    // Recessed channel slot
+    const channelGeo = new THREE.BoxGeometry(0.5, modHalfH * 1.88, 0.3);
+    const channelMat = new THREE.MeshStandardMaterial({ color: 0x06060e, roughness: 0.9, metalness: 0.2 });
+    const channelMesh = new THREE.Mesh(channelGeo, channelMat);
+    channelMesh.position.set(0, 0, -0.12);
+    modScene3D.add(channelMesh);
+
+    // Center tick mark
+    const accentCol = parseCssColorToHex('--knob-dot');
+    modMarkMat3D = new THREE.MeshStandardMaterial({
+        color: accentCol, emissive: accentCol, emissiveIntensity: 0.5, roughness: 0.2,
+    });
+    const tick = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.038, 0.11), modMarkMat3D);
+    tick.position.set(0, 0, 0);
+    modScene3D.add(tick);
+
+    // Grip body
+    const gripGeo = new RoundedBoxGeometry(0.60, 0.40, 0.36, 3, 0.07);
+    const gripMat = new THREE.MeshStandardMaterial({ color: 0x464656, roughness: 0.22, metalness: 0.74 });
+    modGrip3D = new THREE.Mesh(gripGeo, gripMat);
+    modGrip3D.position.set(0, 0, 0.2);
+    modScene3D.add(modGrip3D);
+
+    // Grip indicator stripe
+    modStripeMat3D = new THREE.MeshStandardMaterial({
+        color: accentCol, emissive: accentCol, emissiveIntensity: 0.68, roughness: 0.1,
+    });
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.034, 0.06), modStripeMat3D);
+    stripe.position.set(0, 0, 0.205);
+    modScene3D.add(stripe);
+
+    // Render loop
+    (function loop() {
+        requestAnimationFrame(loop);
+        if (!modNeedsRender) return;
+        modNeedsRender = false;
+        modRenderer3D.render(modScene3D, modCamera3D);
+    })();
+
+    // Drag interaction
+    canvas.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        const startY = e.clientY;
+        const startVal = modValue;
+        const centerPx = modH / 2;
+
+        function onMove(ev) {
+            const dy = startY - ev.clientY;
+            const sensitivity = 0.35;
+            modValue = Math.round((dy / centerPx) * 127 * sensitivity);
+            modValue = Math.max(-127, Math.min(127, modValue + startVal));
+            updateModWheel();
+            const midiValue = Math.round((modValue + 127) / 2);
+            if (connected) invoke("send_cc", { channel, cc: 1, value: midiValue }).catch(() => { });
+        }
+        function onUp() {
+            document.removeEventListener("mousemove", onMove);
+            document.removeEventListener("mouseup", onUp);
+        }
+        document.addEventListener("mousemove", onMove);
+        document.addEventListener("mouseup", onUp);
+    });
+
+    new ResizeObserver(resizeMod3D).observe(wrap);
 }
 
-modTrack.addEventListener("mousedown", (e) => {
-    e.preventDefault();
-    const startY = e.clientY;
-    const startVal = modValue;
-    const trackH = modTrack.clientHeight;
+function resizeMod3D() {
+    if (!modRenderer3D) return;
+    const wrap = document.getElementById("mod-canvas-wrap");
+    const h = wrap.clientHeight;
+    if (h < 20) return;
+    modH = h;
+    modRenderer3D.setSize(MOD_W, h);
+    const halfW = 0.65;
+    modHalfH = halfW * h / MOD_W;
+    modGripRange = modHalfH * 0.74;
+    modCamera3D.top = modHalfH;
+    modCamera3D.bottom = -modHalfH;
+    modCamera3D.updateProjectionMatrix();
+    updateModWheel();
+}
 
-    function onMove(ev) {
-        const dy = startY - ev.clientY; // drag up = positive
-        const centerPos = (trackH - 18) / 2;
-        const sensitivity = 0.35; // finer granularity (3x more precision)
-        modValue = Math.round((dy / centerPos) * 127 * sensitivity);
-        modValue = Math.max(-127, Math.min(127, modValue + startVal));
-        updateModWheel();
-        // Map ±127 to MIDI 0-127 for CC
-        const midiValue = Math.round((modValue + 127) / 2);
-        if (connected) invoke("send_cc", { channel, cc: 1, value: midiValue }).catch(() => { });
+function updateModWheel() {
+    if (!modGrip3D) return;
+    modGrip3D.position.y = (modValue / 127) * modGripRange;
+    modValEl.textContent = modValue;
+    modNeedsRender = true;
+}
+
+function refreshMod3DColors() {
+    if (!modStripeMat3D || !modMarkMat3D) return;
+    const col = parseCssColorToHex('--knob-dot');
+    modStripeMat3D.color.setHex(col);
+    modStripeMat3D.emissive.setHex(col);
+    modStripeMat3D.needsUpdate = true;
+    modMarkMat3D.color.setHex(col);
+    modMarkMat3D.emissive.setHex(col);
+    modMarkMat3D.needsUpdate = true;
+    modNeedsRender = true;
+}
+
+// ── 3D Octave Buttons ─────────────────────────────────────────────────────────
+const OCT_BTN_SIZE = 24;
+const octBtnData = new Map(); // canvas → {renderer, scene, camera, body, accentMat}
+
+function initOctBtn3D(canvasEl, isUp) {
+    const S = OCT_BTN_SIZE;
+    const renderer = new THREE.WebGLRenderer({ canvas: canvasEl, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(S, S);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
+    camera.position.set(0, 3.2, 2.4);
+    camera.lookAt(0, 0, 0);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.48));
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.05);
+    keyLight.position.set(1.5, 4, 2);
+    scene.add(keyLight);
+    const rimLight = new THREE.DirectionalLight(0x4466cc, 0.32);
+    rimLight.position.set(-1.5, 2, -2);
+    scene.add(rimLight);
+
+    // Button body
+    const bodyGeo = new RoundedBoxGeometry(1.55, 0.32, 1.55, 3, 0.14);
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x2c2c38, roughness: 0.3, metalness: 0.6 });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    scene.add(body);
+
+    // Symbol material (accent colored)
+    const accentCol = parseCssColorToHex('--knob-dot');
+    const accentMat = new THREE.MeshStandardMaterial({
+        color: accentCol, emissive: accentCol, emissiveIntensity: 0.45,
+        roughness: 0.1, metalness: 0.05,
+    });
+
+    // Horizontal bar (present on both + and −)
+    const hBar = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.07, 0.11), accentMat);
+    hBar.position.set(0, 0.175, 0);
+    scene.add(hBar);
+
+    if (isUp) {
+        // Vertical bar (makes + for the up button)
+        const vBar = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.07, 0.72), accentMat);
+        vBar.position.set(0, 0.175, 0);
+        scene.add(vBar);
     }
-    function onUp() {
-        document.removeEventListener("mousemove", onMove);
-        document.removeEventListener("mouseup", onUp);
+
+    renderer.render(scene, camera);
+
+    const data = { renderer, scene, camera, body, accentMat };
+    octBtnData.set(canvasEl, data);
+    return data;
+}
+
+function pressOctBtn3D(canvasEl) {
+    const data = octBtnData.get(canvasEl);
+    if (!data) return;
+    data.body.position.y = -0.1;
+    data.renderer.render(data.scene, data.camera);
+    setTimeout(() => {
+        data.body.position.y = 0;
+        data.renderer.render(data.scene, data.camera);
+    }, 100);
+}
+
+function refreshOct3DColors() {
+    const col = parseCssColorToHex('--knob-dot');
+    for (const [, data] of octBtnData) {
+        data.accentMat.color.setHex(col);
+        data.accentMat.emissive.setHex(col);
+        data.accentMat.needsUpdate = true;
+        data.renderer.render(data.scene, data.camera);
     }
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
-});
+}
+
+// ── 3D Octave Display ─────────────────────────────────────────────────────────
+const OCT_DISP_W = 44, OCT_DISP_H = 30;
+let octDispRenderer, octDispScene, octDispCamera, octDispTexCtx, octDispMat;
+
+function initOctDisplay3D() {
+    const canvas = document.getElementById("oct-display-canvas");
+
+    octDispRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    octDispRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    octDispRenderer.setSize(OCT_DISP_W, OCT_DISP_H);
+
+    octDispScene = new THREE.Scene();
+    octDispCamera = new THREE.PerspectiveCamera(28, OCT_DISP_W / OCT_DISP_H, 0.1, 100);
+    octDispCamera.position.set(0, 1.8, 3.5);
+    octDispCamera.lookAt(0, 0, 0);
+
+    octDispScene.add(new THREE.AmbientLight(0xffffff, 0.4));
+    const kl = new THREE.DirectionalLight(0xffffff, 0.9);
+    kl.position.set(2, 3, 3);
+    octDispScene.add(kl);
+
+    // Physical panel (dark recessed face)
+    const panelMat = new THREE.MeshStandardMaterial({ color: 0x08080f, roughness: 0.55, metalness: 0.3 });
+    const panel = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.7, 0.22), panelMat);
+    octDispScene.add(panel);
+
+    // 2D canvas texture for the digit
+    const texCanvas = document.createElement("canvas");
+    texCanvas.width = 128; texCanvas.height = 64;
+    octDispTexCtx = texCanvas.getContext("2d");
+
+    const tex = new THREE.CanvasTexture(texCanvas);
+    octDispMat = new THREE.MeshBasicMaterial({ map: tex, transparent: true });
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(2.8, 1.3), octDispMat);
+    plane.position.z = 0.115;
+    octDispScene.add(plane);
+
+    updateOctDisplay3D();
+}
+
+function updateOctDisplay3D() {
+    if (!octDispTexCtx) return;
+    const ctx = octDispTexCtx;
+    const W = 128, H = 64;
+    ctx.clearRect(0, 0, W, H);
+
+    // Background with scanlines
+    ctx.fillStyle = 'rgba(2, 2, 12, 0.92)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+    for (let y = 0; y < H; y += 2) ctx.fillRect(0, y, W, 1);
+
+    // Accent-coloured digit
+    const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#4da6ff';
+    ctx.font = 'bold 44px "Courier New", monospace';
+    ctx.fillStyle = accent;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = accent;
+    ctx.shadowBlur = 12;
+    ctx.fillText(String(baseOctave), W / 2, H / 2);
+
+    octDispMat.map.needsUpdate = true;
+    octDispRenderer.render(octDispScene, octDispCamera);
+}
 
 // ── Rotary knob system ────────────────────────────────────────────────────────
 function knobRotation(value, min, max) {
@@ -671,8 +897,8 @@ window.addEventListener("keydown", (e) => {
     if (/^F[1-9]$/.test(e.key) && !e.repeat) {
         e.preventDefault();
         baseOctave = parseInt(e.key.slice(1)) - 1;
-        octaveDisplay.textContent = baseOctave;
-        buildKeyboard();
+        updateOctDisplay3D();
+        buildKeys3D();
         return;
     }
 
@@ -791,11 +1017,11 @@ portSelect.addEventListener("change", async () => {
 refreshBtn.addEventListener("click", loadPorts);
 
 // ── Controls ──────────────────────────────────────────────────────────────────
-octDownBtn.addEventListener("click", () => {
-    if (baseOctave > 0) { baseOctave--; octaveDisplay.textContent = baseOctave; buildKeys3D(); }
+octDownCanvas.addEventListener("click", () => {
+    if (baseOctave > 0) { baseOctave--; updateOctDisplay3D(); buildKeys3D(); pressOctBtn3D(octDownCanvas); }
 });
-octUpBtn.addEventListener("click", () => {
-    if (baseOctave < 8) { baseOctave++; octaveDisplay.textContent = baseOctave; buildKeys3D(); }
+octUpCanvas.addEventListener("click", () => {
+    if (baseOctave < 8) { baseOctave++; updateOctDisplay3D(); buildKeys3D(); pressOctBtn3D(octUpCanvas); }
 });
 
 // Channel selector
@@ -934,6 +1160,7 @@ window.addEventListener("load", () => {
     baseHeight = appEl.offsetHeight;
     applyZoom();
     loadPorts();
+    initMod3D();
 });
 
 // Zoom controls (in config modal)
@@ -970,6 +1197,9 @@ function applyTheme(name) {
     localStorage.setItem("theme", name);
     setThemeLighting(name);
     refreshKnob3DColors();
+    refreshMod3DColors();
+    refreshOct3DColors();
+    updateOctDisplay3D();
 }
 
 swatches.forEach(s => s.addEventListener("click", () => applyTheme(s.dataset.theme)));
@@ -1007,11 +1237,12 @@ function setStatus(msg, type = "") {
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
-octaveDisplay.textContent = baseOctave;
 appTitle.textContent = GM_PATCH_NAMES[patch];
 updateZoomDisplay();
 initKeyboard3D();
-updateModWheel();
+initOctDisplay3D();
+initOctBtn3D(octUpCanvas, true);
+initOctBtn3D(octDownCanvas, false);
 
 appWindow.innerSize().then(s => appWindow.scaleFactor().then(sf => {
     prevLogW = s.width / sf;
@@ -1020,5 +1251,4 @@ appWindow.innerSize().then(s => appWindow.scaleFactor().then(sf => {
 
 new ResizeObserver(() => {
     resizeKeyboard3D();
-    updateModWheel();
 }).observe(keyboardContainer);
