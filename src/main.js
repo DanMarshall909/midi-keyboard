@@ -216,6 +216,58 @@ function setThemeLighting(name) {
     kbNeedsRender = true;
 }
 
+function createBrandBadge() {
+    const texCanvas = document.createElement("canvas");
+    texCanvas.width = 1024;
+    texCanvas.height = 256;
+    const ctx = texCanvas.getContext("2d");
+    if (!ctx) return null;
+
+    ctx.clearRect(0, 0, texCanvas.width, texCanvas.height);
+
+    // Subtle dark decal base + keyline for classic hardware branding.
+    ctx.fillStyle = "rgba(8, 8, 10, 0.82)";
+    ctx.fillRect(12, 52, texCanvas.width - 24, 152);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.20)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(12, 52, texCanvas.width - 24, 152);
+
+    const text = "QWERTone";
+    const tracking = 5.5;
+    ctx.font = "800 106px Arial Black";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#222222";
+
+    let totalW = 0;
+    for (let i = 0; i < text.length; i++) {
+        totalW += ctx.measureText(text[i]).width + (i < text.length - 1 ? tracking : 0);
+    }
+    let x = (texCanvas.width - totalW) / 2;
+    const y = texCanvas.height / 2 - 2;
+    for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        ctx.fillText(ch, x, y);
+        x += ctx.measureText(ch).width + tracking;
+    }
+
+    const tex = new THREE.CanvasTexture(texCanvas);
+    tex.anisotropy = 4;
+    tex.needsUpdate = true;
+
+    const badge = new THREE.Mesh(
+        new THREE.PlaneGeometry(2.95, 0.98),
+        new THREE.MeshStandardMaterial({
+            map: tex,
+            transparent: true,
+            roughness: 0.34,
+            metalness: 0.02,
+        })
+    );
+    badge.castShadow = false;
+    badge.receiveShadow = false;
+    return badge;
+}
+
 
 function initKeyboard3D() {
     const canvas = document.getElementById("keyboard-canvas");
@@ -296,6 +348,12 @@ function initKeyboard3D() {
     headMesh.castShadow = true;
     headMesh.receiveShadow = true;
     kbScene.add(headMesh);
+
+    const badge = createBrandBadge();
+    if (badge) {
+        badge.position.set(bodyRight-2, bodyTop - bodyH + 0.8, BODY_D / 2 + 0.015);
+        kbScene.add(badge);
+    }
 
     buildKeys3D();
     initSceneControls();
