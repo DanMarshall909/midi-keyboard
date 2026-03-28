@@ -12,7 +12,7 @@ import { noteOn, noteOff } from "./midi";
 import {
   initSceneControls,
   getModWheelHitbox, getPitchWheelHitbox, getKnobBodies,
-  updateSceneModWheel,
+  updateSceneModWheel, updateSceneLedDisplays, tickPatchLedMarquee,
   handleKnobDrag, handleModWheelDrag, handlePitchWheelDrag, releasePitchWheel,
 } from "./controls3d";
 
@@ -322,6 +322,7 @@ function setupMouseHandlers(canvas: HTMLCanvasElement): void {
 function startRenderLoop(): void {
   (function loop() {
     requestAnimationFrame(loop);
+    tickPatchLedMarquee();
     if (discoMode) {
       discoAngle += 0.02;
       const cx = Math.sin(discoAngle * 0.31) * 6.5;
@@ -450,5 +451,5 @@ function createBrandBadge(): THREE.Mesh | null {
   return badge;
 }
 
-// Re-export for use by ui.ts blur handler
-export { updateSceneModWheel };
+// Re-export for use by ui.ts
+export { updateSceneModWheel, updateSceneLedDisplays };

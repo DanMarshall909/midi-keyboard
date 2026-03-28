@@ -3,7 +3,7 @@ import { GM_PATCHES, GM_PATCH_NAMES, ARROW_CC_OPTIONS } from "./constants";
 import { state } from "./state";
 import { setStatus } from "./status";
 import { sendCC, programChange, getMidiPorts, connectPort, disconnect, pitchBend } from "./midi";
-import { midiNoteFromKey, triggerNoteOn, triggerNoteOff, buildKeys3D, updateSceneModWheel, resizeKeyboard3D } from "./keyboard3d";
+import { midiNoteFromKey, triggerNoteOn, triggerNoteOff, buildKeys3D, updateSceneModWheel, updateSceneLedDisplays, resizeKeyboard3D } from "./keyboard3d";
 
 const appWindow = getCurrentWindow();
 
@@ -14,7 +14,7 @@ const refreshBtn     = document.getElementById("refresh-btn")   as HTMLButtonEle
 const channelSelect  = document.getElementById("channel-select") as HTMLSelectElement;
 const patchSelect    = document.getElementById("patch-select")  as HTMLSelectElement;
 const arrowCcSelect  = document.getElementById("arrow-cc-select") as HTMLSelectElement;
-const keyboardContainer = document.getElementById("keyboard-container") as HTMLElement;
+export const keyboardContainer = document.getElementById("keyboard-container") as HTMLElement;
 const titlebar       = document.getElementById("titlebar")      as HTMLElement;
 const zoomInBtn      = document.getElementById("zoom-in")       as HTMLButtonElement;
 const zoomOutBtn     = document.getElementById("zoom-out")      as HTMLButtonElement;
@@ -75,7 +75,10 @@ export function initChannelSelect(): void {
     opt.textContent = String(i);
     channelSelect.appendChild(opt);
   }
-  channelSelect.addEventListener("change", () => { state.channel = parseInt(channelSelect.value); });
+  channelSelect.addEventListener("change", () => {
+    state.channel = parseInt(channelSelect.value);
+    updateSceneLedDisplays();
+  });
 }
 
 // ── Patch selector ────────────────────────────────────────────────────────────
@@ -96,6 +99,7 @@ export function initPatchSelect(): void {
   patchSelect.addEventListener("change", async () => {
     state.patch = parseInt(patchSelect.value);
     appTitle.textContent = GM_PATCH_NAMES[state.patch];
+    updateSceneLedDisplays();
     if (!state.connected) return;
     try {
       await programChange(state.channel, state.patch);
