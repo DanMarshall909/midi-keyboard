@@ -89,7 +89,7 @@ const _CX = 2.15;
 export const CAMERA_PRESETS: Record<string, CameraPreset> = {
   default:  { label: "Default",  position: [_CX, 13.0, 12.3], lookAt: [_CX, -5.0, -2.2] },
   close:    { label: "Close",    position: [_CX,  8.0,  9.0],  lookAt: [_CX, -2.0, -1.5] },
-  top:      { label: "Top",      position: [_CX, 18.0,  4.0],  lookAt: [_CX,  0.0, -2.5] },
+  top:      { label: "Top",      position: [_CX, 22.0,  1.0],  lookAt: [_CX,  0.0,  0.0] },
   front:    { label: "Front",    position: [_CX,  4.0, 15.0],  lookAt: [_CX, -0.5, -2.5] },
   dramatic: { label: "Dramatic", position: [_CX,  5.5,  9.5],  lookAt: [_CX, -2.5, -1.8] },
 };

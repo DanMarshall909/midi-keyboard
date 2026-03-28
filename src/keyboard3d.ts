@@ -279,7 +279,6 @@ function setupMouseHandlers(canvas: HTMLCanvasElement): void {
       sel.style.left = e.clientX + "px"; sel.style.top = e.clientY + "px";
       sel.showPicker();
       sel.style.left = "-9999px"; sel.style.top = "-9999px";
-      sel.blur();
       return;
     }
     if (channelMesh && kbRaycaster.intersectObject(channelMesh, false).length) {
@@ -287,7 +286,6 @@ function setupMouseHandlers(canvas: HTMLCanvasElement): void {
       sel.style.left = e.clientX + "px"; sel.style.top = e.clientY + "px";
       sel.showPicker();
       sel.style.left = "-9999px"; sel.style.top = "-9999px";
-      sel.blur();
       return;
     }
 

@@ -335,7 +335,7 @@ function renderLedDisplay(
   const w = canvas.width;
   const h = canvas.height;
   const sf = h / 320;
-  const { r, g, b } = parseCssColorToRgb("--knob-dot", "#aac8ff");
+  const { r, g, b } = parseCssColorToRgb("--knob-dot", "rgb(138, 179, 255)");
   const darkR = Math.round(r * 0.08);
   const darkG = Math.round(g * 0.08);
   const darkB = Math.round(b * 0.08);
