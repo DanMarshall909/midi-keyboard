@@ -422,7 +422,7 @@ export function updateSceneLedDisplays(): void {
   if (!kbPatchLed || !kbChannelLed) return;
   renderLedDisplay(kbChannelLed, "CH", String(state.channel + 1).padStart(2, "0"));
   const patchNum = String(state.patch + 1).padStart(3, "0");
-  const patchName = GM_PATCH_NAMES[state.patch].toUpperCase().replace(/\s+/g, " ").trim();
+  const patchName = GM_PATCH_NAMES[state.patch].replace(/\s+/g, " ").trim();
   const nextPatchText = `${patchNum} ${patchName}`;
   if (nextPatchText !== patchLedText) {
     patchLedText = nextPatchText;
