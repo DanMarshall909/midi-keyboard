@@ -13,7 +13,7 @@ import { noteOn, noteOff } from "./midi";
 import {
   initSceneControls,
   getModWheelHitbox, getPitchWheelHitbox, getKnobBodies,
-  updateSceneModWheel, updateSceneLedDisplays, tickPatchLedMarquee,
+  updateSceneModWheel, updateSceneLedDisplays, updateKnobColors, tickPatchLedMarquee,
   handleKnobDrag, handleModWheelDrag, handlePitchWheelDrag, releasePitchWheel,
 } from "./controls3d";
 
@@ -106,6 +106,8 @@ export function setThemeLighting(name: string): void {
   const cfg = THEME_LIGHTS[name] ?? THEME_LIGHTS.default;
   kbSun.color.set(cfg.sun.color); kbSun.intensity = cfg.sun.intensity;
   kbFill.color.set(cfg.fill.color); kbFill.intensity = cfg.fill.intensity;
+  updateKnobColors();
+  updateSceneLedDisplays();
   kbNeedsRender = true;
 }
 
@@ -381,6 +383,8 @@ function startRenderLoop(): void {
       r.style.setProperty("--mod-grip-t",    `hsl(${h1},60%,30%)`);
       r.style.setProperty("--mod-grip-b",    `hsl(${h1},60%,15%)`);
       r.style.setProperty("--mod-grip-bdr",  `hsla(${h1},100%,65%,0.4)`);
+      updateKnobColors();
+      updateSceneLedDisplays();
       kbNeedsRender = true;
     }
     if (!kbNeedsRender) return;

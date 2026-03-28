@@ -12,6 +12,7 @@ let kbPitchWheelSpinner: THREE.Group | null = null;
 let kbModWheelHitbox: THREE.Mesh | null = null;
 let kbPitchWheelHitbox: THREE.Mesh | null = null;
 const kbKnobBodies: THREE.Mesh[] = [];
+const kbPipMats: THREE.MeshStandardMaterial[] = [];
 let markDirty: () => void = () => {};
 
 // ── LED display state ─────────────────────────────────────────────────────────
@@ -148,6 +149,7 @@ export function initSceneControls(
     const pip = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.04, 10), pipMat);
     pip.position.set(0, 0.13, -0.27);
     body.add(pip);
+    kbPipMats.push(pipMat);
 
     body.position.set(kx, knobY, knobBaseZ);
     body.userData = { type: "knob", knobIndex: i };
@@ -238,24 +240,25 @@ export function knobRotation(value: number, min: number, max: number): number {
   return -135 + ((value - min) / (max - min)) * 270;
 }
 
-function parseCssColorToRgb(varName: string, fallback = "#83ff9e"): { r: number; g: number; b: number } {
-  const str = getComputedStyle(document.documentElement).getPropertyValue(varName).trim() || fallback;
-  const m = str.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
-  if (m) return { r: parseInt(m[1]), g: parseInt(m[2]), b: parseInt(m[3]) };
-  const h = str.replace(/^#/, "");
-  if (h.length === 6) return { r: parseInt(h.slice(0, 2), 16), g: parseInt(h.slice(2, 4), 16), b: parseInt(h.slice(4, 6), 16) };
-  if (h.length === 3) return { r: parseInt(h[0] + h[0], 16), g: parseInt(h[1] + h[1], 16), b: parseInt(h[2] + h[2], 16) };
-  return { r: 131, g: 255, b: 158 };
+let _colorProbe: HTMLDivElement | null = null;
+function resolveCssColor(varName: string, fallback: string): { r: number; g: number; b: number } {
+  if (!_colorProbe) {
+    _colorProbe = document.createElement("div");
+    _colorProbe.style.cssText = "position:absolute;width:0;height:0;opacity:0;pointer-events:none";
+    document.body.appendChild(_colorProbe);
+  }
+  _colorProbe.style.color = `var(${varName}, ${fallback})`;
+  const m = getComputedStyle(_colorProbe).color.match(/\d+/g);
+  return m && m.length >= 3 ? { r: +m[0], g: +m[1], b: +m[2] } : { r: 131, g: 255, b: 158 };
+}
+
+function parseCssColorToRgb(varName: string, fallback = "#aac8ff"): { r: number; g: number; b: number } {
+  return resolveCssColor(varName, fallback);
 }
 
 function parseCssColorToHex(varName: string): number {
-  const str = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
-  const m = str.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
-  if (m) return (parseInt(m[1]) << 16) | (parseInt(m[2]) << 8) | parseInt(m[3]);
-  const h = str.replace(/^#/, "");
-  if (h.length === 6) return parseInt(h, 16);
-  if (h.length === 3) return parseInt(h[0] + h[0] + h[1] + h[1] + h[2] + h[2], 16);
-  return 0x7ab4ff;
+  const { r, g, b } = resolveCssColor(varName, "#7ab4ff");
+  return (r << 16) | (g << 8) | b;
 }
 
 function createControlLabel(text: string, width = 0.95, height = 0.24): THREE.Mesh | null {
@@ -328,7 +331,7 @@ function renderLedDisplay(
   const w = canvas.width;
   const h = canvas.height;
   const sf = h / 320;
-  const { r, g, b } = parseCssColorToRgb("--accent", "#83ff9e");
+  const { r, g, b } = parseCssColorToRgb("--knob-dot", "#aac8ff");
   const darkR = Math.round(r * 0.08);
   const darkG = Math.round(g * 0.08);
   const darkB = Math.round(b * 0.08);
@@ -415,6 +418,15 @@ export function tickPatchLedMarquee(): void {
   patchLedLastTick = now;
   patchLedScrollOffset += (dt / 1000) * 520;
   renderLedDisplay(kbPatchLed, "PATCH", patchLedText, { allowScroll: true, scrollOffset: patchLedScrollOffset });
+  markDirty();
+}
+
+export function updateKnobColors(): void {
+  const col = parseCssColorToHex("--knob-dot");
+  for (const mat of kbPipMats) {
+    mat.color.set(col);
+    mat.emissive.set(col);
+  }
   markDirty();
 }
 
