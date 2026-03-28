@@ -52,7 +52,7 @@ export function initSceneControls(
   const modWheelY = -0.52;
   const wheelR = 1.15;
   const wheelW = 0.55;
-  const wheelZ = 1.2;
+  const wheelZ = 0.6;
   const pitchCX = panelCX - wheelW - 0.22;
   const markerMat = new THREE.MeshStandardMaterial({
     color: 0xaaaaaa, emissive: 0xaaaaaa, emissiveIntensity: 0.3,
@@ -113,7 +113,7 @@ export function initSceneControls(
   kbModWheelHitbox = modObj.hitbox;
   kbModWheelHitbox.userData = { type: "modwheel" };
   const modLabel = createControlLabel("MOD", 0.98, 0.26);
-  if (modLabel) { modLabel.position.set(panelCX, -WKH / 2 + 0.012, wheelZ + 0.25); scene.add(modLabel); }
+  if (modLabel) { modLabel.position.set(panelCX, -WKH / 2 + 0.012, wheelZ + wheelR + 0.10); scene.add(modLabel); }
 
   // Pitch wheel
   const pitchObj = buildWheel(pitchCX);
@@ -121,7 +121,7 @@ export function initSceneControls(
   kbPitchWheelHitbox = pitchObj.hitbox;
   kbPitchWheelHitbox.userData = { type: "pitchwheel" };
   const pitchLabel = createControlLabel("PITCH", 1.3, 0.26);
-  if (pitchLabel) { pitchLabel.position.set(pitchCX, -WKH / 2 + 0.012, wheelZ + 0.25); scene.add(pitchLabel); }
+  if (pitchLabel) { pitchLabel.position.set(pitchCX, -WKH / 2 + 0.012, wheelZ + wheelR + 0.10); scene.add(pitchLabel); }
 
   // Knobs on the raised head slab
   const knobBaseZ = -(BODY_D / 2 - HEAD_D / 2);

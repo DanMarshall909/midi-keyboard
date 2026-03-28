@@ -9,7 +9,9 @@ import {
 } from "./constants";
 import { state } from "./state";
 import { setStatus } from "./status";
-import { noteOn, noteOff } from "./midi";
+import { noteOn, noteOff, programChange } from "./midi";
+import { GM_PATCH_NAMES } from "./constants";
+import { openDropdown } from "./dropdown";
 import {
   initSceneControls,
   getModWheelHitbox, getPitchWheelHitbox, getKnobBodies, getLedMeshes,
@@ -161,7 +163,7 @@ export function buildKeys3D(): void {
 export function resizeKeyboard3D(container: HTMLElement): void {
   const w = container.clientWidth;
   const h = container.clientHeight;
-  if (w < 10 || h < 10) return;
+  if (w < 10 || h < 10 || !kbRenderer) return;
   kbRenderer.setSize(w, h);
   kbCamera.aspect = w / h;
   kbCamera.updateProjectionMatrix();
@@ -275,17 +277,24 @@ function setupMouseHandlers(canvas: HTMLCanvasElement): void {
 
     const { patch: patchMesh, channel: channelMesh } = getLedMeshes();
     if (patchMesh && kbRaycaster.intersectObject(patchMesh, false).length) {
-      const sel = document.getElementById("patch-select") as HTMLSelectElement;
-      sel.style.left = e.clientX + "px"; sel.style.top = e.clientY + "px";
-      sel.showPicker();
-      sel.style.left = "-9999px"; sel.style.top = "-9999px";
+      openDropdown(
+        GM_PATCH_NAMES.map((name, i) => ({ label: `${i + 1}. ${name}`, value: i })),
+        state.patch, e.clientX, e.clientY,
+        (value) => {
+          state.patch = value;
+          updateSceneLedDisplays();
+          if (state.connected) programChange(state.channel, value).catch(() => {});
+        },
+      );
       return;
     }
     if (channelMesh && kbRaycaster.intersectObject(channelMesh, false).length) {
-      const sel = document.getElementById("channel-select") as HTMLSelectElement;
-      sel.style.left = e.clientX + "px"; sel.style.top = e.clientY + "px";
-      sel.showPicker();
-      sel.style.left = "-9999px"; sel.style.top = "-9999px";
+      openDropdown(
+        Array.from({ length: 16 }, (_, i) => ({ label: `Ch ${i + 1}`, value: i })),
+        state.channel, e.clientX, e.clientY,
+        (value) => { state.channel = value; updateSceneLedDisplays(); },
+        false,
+      );
       return;
     }
 
