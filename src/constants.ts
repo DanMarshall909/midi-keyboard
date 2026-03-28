@@ -72,6 +72,28 @@ export const THEME_LIGHTS: Record<string, ThemeLightCfg> = {
   matrix:   { sun: { color: 0x00ff66, intensity: 1.2 },  fill: { color: 0x00aa44, intensity: 0.15 } },
 };
 
+// ── Key material presets ──────────────────────────────────────────────────────
+interface MatDef { color: number; roughness: number; metalness: number }
+export interface KeyMaterialPreset { label: string; white: MatDef; black: MatDef; housing: MatDef }
+export const KEY_MATERIAL_PRESETS: Record<string, KeyMaterialPreset> = {
+  classic:  { label: "Classic",  white: { color: 0xf0f0eb, roughness: 0.35, metalness: 0.00 }, black: { color: 0x1c1c1c, roughness: 0.20, metalness: 0.05 }, housing: { color: 0x3a3a3e, roughness: 0.78, metalness: 0.04 } },
+  ebony:    { label: "Ebony",    white: { color: 0xfaf4e6, roughness: 0.28, metalness: 0.00 }, black: { color: 0x0c0a08, roughness: 0.10, metalness: 0.12 }, housing: { color: 0x1c1008, roughness: 0.62, metalness: 0.10 } },
+  gold:     { label: "Gold",     white: { color: 0xfff8d8, roughness: 0.18, metalness: 0.55 }, black: { color: 0x3a2c00, roughness: 0.10, metalness: 0.82 }, housing: { color: 0x241c08, roughness: 0.45, metalness: 0.40 } },
+  obsidian: { label: "Obsidian", white: { color: 0x2e2e36, roughness: 0.14, metalness: 0.48 }, black: { color: 0x080810, roughness: 0.05, metalness: 0.72 }, housing: { color: 0x101018, roughness: 0.38, metalness: 0.58 } },
+  marble:   { label: "Marble",   white: { color: 0xe8e4dc, roughness: 0.22, metalness: 0.00 }, black: { color: 0x282c30, roughness: 0.18, metalness: 0.14 }, housing: { color: 0xbcb8b0, roughness: 0.84, metalness: 0.02 } },
+};
+
+// ── Camera presets ────────────────────────────────────────────────────────────
+export interface CameraPreset { label: string; position: [number, number, number]; lookAt: [number, number, number] }
+const _CX = 2.15;
+export const CAMERA_PRESETS: Record<string, CameraPreset> = {
+  default:  { label: "Default",  position: [_CX, 13.0, 12.3], lookAt: [_CX, -5.0, -2.2] },
+  close:    { label: "Close",    position: [_CX,  8.0,  9.0],  lookAt: [_CX, -2.0, -1.5] },
+  top:      { label: "Top",      position: [_CX, 18.0,  4.0],  lookAt: [_CX,  0.0, -2.5] },
+  front:    { label: "Front",    position: [_CX,  4.0, 15.0],  lookAt: [_CX, -0.5, -2.5] },
+  dramatic: { label: "Dramatic", position: [_CX,  5.5,  9.5],  lookAt: [_CX, -2.5, -1.8] },
+};
+
 // ── Arrow CC options ──────────────────────────────────────────────────────────
 export const ARROW_CC_OPTIONS: [number, string][] = [
   [1, "1 – Mod Wheel"], [7, "7 – Volume"], [10, "10 – Pan"],

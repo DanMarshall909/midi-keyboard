@@ -5,6 +5,7 @@ import {
   WKW, WKH, WKD, BKW, BKH, BKD, KEY_GAP,
   DISPLAY_OCTAVES, BODY_D, HEAD_H, HEAD_D, KEY_OFFSET_X,
   SCENE_KNOBS, THEME_LIGHTS, KEY_MAP,
+  KEY_MATERIAL_PRESETS, CAMERA_PRESETS,
 } from "./constants";
 import { state } from "./state";
 import { setStatus } from "./status";
@@ -449,6 +450,21 @@ function createBrandBadge(): THREE.Mesh | null {
   );
   badge.castShadow = false; badge.receiveShadow = false;
   return badge;
+}
+
+export function setKeyMaterialPreset(name: string): void {
+  const p = KEY_MATERIAL_PRESETS[name] ?? KEY_MATERIAL_PRESETS.classic;
+  matWhite.color.set(p.white.color);   matWhite.roughness = p.white.roughness;   matWhite.metalness = p.white.metalness;
+  matBlack.color.set(p.black.color);   matBlack.roughness = p.black.roughness;   matBlack.metalness = p.black.metalness;
+  matHousing.color.set(p.housing.color); matHousing.roughness = p.housing.roughness; matHousing.metalness = p.housing.metalness;
+  kbNeedsRender = true;
+}
+
+export function setCameraPreset(name: string): void {
+  const p = CAMERA_PRESETS[name] ?? CAMERA_PRESETS.default;
+  kbCamera.position.set(...p.position);
+  kbCamera.lookAt(...p.lookAt);
+  kbNeedsRender = true;
 }
 
 // Re-export for use by ui.ts

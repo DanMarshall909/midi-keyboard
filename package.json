@@ -9,6 +9,7 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@fontsource/orbitron": "^5.2.8",
     "@tauri-apps/api": "^2.0.0",
     "three": "^0.183.2"
   },

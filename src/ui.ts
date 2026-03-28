@@ -1,9 +1,9 @@
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
-import { GM_PATCHES, GM_PATCH_NAMES, ARROW_CC_OPTIONS } from "./constants";
+import { GM_PATCHES, GM_PATCH_NAMES, ARROW_CC_OPTIONS, KEY_MATERIAL_PRESETS, CAMERA_PRESETS } from "./constants";
 import { state } from "./state";
 import { setStatus } from "./status";
 import { sendCC, programChange, getMidiPorts, connectPort, disconnect, pitchBend } from "./midi";
-import { midiNoteFromKey, triggerNoteOn, triggerNoteOff, buildKeys3D, updateSceneModWheel, updateSceneLedDisplays, resizeKeyboard3D } from "./keyboard3d";
+import { midiNoteFromKey, triggerNoteOn, triggerNoteOff, buildKeys3D, updateSceneModWheel, updateSceneLedDisplays, setKeyMaterialPreset, setCameraPreset, resizeKeyboard3D } from "./keyboard3d";
 
 const appWindow = getCurrentWindow();
 
@@ -315,5 +315,31 @@ export function initOverlays(): void {
   document.getElementById("config-btn")!.addEventListener("click", () => configOverlay.classList.toggle("hidden"));
   document.getElementById("config-close")!.addEventListener("click", () => configOverlay.classList.add("hidden"));
   configOverlay.addEventListener("click", (e) => { if (e.target === configOverlay) configOverlay.classList.add("hidden"); });
+
+  const materialSelect = document.getElementById("material-select") as HTMLSelectElement;
+  for (const [key, preset] of Object.entries(KEY_MATERIAL_PRESETS)) {
+    const opt = document.createElement("option");
+    opt.value = key; opt.textContent = preset.label;
+    materialSelect.appendChild(opt);
+  }
+  const savedMaterial = localStorage.getItem("material") ?? "classic";
+  materialSelect.value = savedMaterial;
+  materialSelect.addEventListener("change", () => {
+    setKeyMaterialPreset(materialSelect.value);
+    localStorage.setItem("material", materialSelect.value);
+  });
+
+  const cameraSelect = document.getElementById("camera-select") as HTMLSelectElement;
+  for (const [key, preset] of Object.entries(CAMERA_PRESETS)) {
+    const opt = document.createElement("option");
+    opt.value = key; opt.textContent = preset.label;
+    cameraSelect.appendChild(opt);
+  }
+  const savedCamera = localStorage.getItem("camera") ?? "default";
+  cameraSelect.value = savedCamera;
+  cameraSelect.addEventListener("change", () => {
+    setCameraPreset(cameraSelect.value);
+    localStorage.setItem("camera", cameraSelect.value);
+  });
 }
 

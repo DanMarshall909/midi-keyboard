@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { sendCC, pitchBend } from "./midi";
 import { state } from "./state";
 import {
-  SCENE_KNOBS, KNOB_R, WKH, WKD, BODY_D, HEAD_H, HEAD_D, KEY_OFFSET_X, DISPLAY_OCTAVES, WKW, KEY_GAP,
+  SCENE_KNOBS, KNOB_R, WKH, BODY_D, HEAD_H, HEAD_D, KEY_OFFSET_X, DISPLAY_OCTAVES, WKW, KEY_GAP,
 } from "./constants";
 import { GM_PATCH_NAMES } from "./constants";
 
@@ -165,10 +165,10 @@ export function initSceneControls(
   const bodyLeft = pitchCX - wheelW / 2 - 0.4;
   const ledMargin = 0.42;
   const ledGap = 0.44;
-  const patchLedW = 2.6;
-  const channelLedW = 1.15;
-  kbPatchLed = createLedDisplay(patchLedW, 0.6);
-  kbChannelLed = createLedDisplay(channelLedW, 0.6, 320);
+  const patchLedW = 3.25;
+  const channelLedW = 0.72;
+  kbPatchLed = createLedDisplay(patchLedW, 0.75);
+  kbChannelLed = createLedDisplay(channelLedW, 0.75, 320, 512);
   if (kbChannelLed?.mesh) {
     const channelX = bodyLeft + ledMargin + patchLedW + ledGap + channelLedW / 2;
     kbChannelLed.mesh.position.set(channelX, ledY, ledZ);
@@ -291,9 +291,9 @@ function createControlLabel(text: string, width = 0.95, height = 0.24): THREE.Me
   return label;
 }
 
-function createLedDisplay(width = 1.9, height = 0.58, canvasHeight = 320): LedDisplay | null {
+function createLedDisplay(width = 1.9, height = 0.58, canvasHeight = 320, canvasWidth = 1024): LedDisplay | null {
   const canvas = document.createElement("canvas");
-  canvas.width = 1024;
+  canvas.width = canvasWidth;
   canvas.height = canvasHeight;
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
@@ -314,7 +314,7 @@ function createLedDisplay(width = 1.9, height = 0.58, canvasHeight = 320): LedDi
   return { canvas, ctx, texture, mesh };
 }
 
-interface RenderLedOpts { scrollOffset?: number; allowScroll?: boolean; }
+interface RenderLedOpts { scrollOffset?: number; allowScroll?: boolean; fontFamily?: string; }
 
 function renderLedDisplay(
   led: LedDisplay | null,
@@ -323,7 +323,7 @@ function renderLedDisplay(
   opts: RenderLedOpts = {},
 ): { overflowPx: number } | undefined {
   if (!led?.ctx) return;
-  const { scrollOffset = 0, allowScroll = false } = opts;
+  const { scrollOffset = 0, allowScroll = false, fontFamily = "Orbitron" } = opts;
   const { canvas, ctx, texture } = led;
   const w = canvas.width;
   const h = canvas.height;
@@ -354,7 +354,7 @@ function renderLedDisplay(
   ctx.lineWidth = 5 * sf;
   ctx.strokeRect(18, 22 * sf, w - 36, h - 44 * sf);
 
-  ctx.font = `700 ${64 * sf}px Consolas`;
+  ctx.font = `700 ${64 * sf}px ${fontFamily}`;
   ctx.fillStyle = `rgba(${brightR}, ${brightG}, ${brightB}, 0.98)`;
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
@@ -369,10 +369,10 @@ function renderLedDisplay(
     if (value.length > 20) valueFontSize = 88;
   }
   const maxValueW = w - 90;
-  ctx.font = `900 ${valueFontSize * sf}px Consolas`;
+  ctx.font = `900 ${valueFontSize * sf}px ${fontFamily}`;
   while (!allowScroll && ctx.measureText(value).width > maxValueW && valueFontSize > 44) {
     valueFontSize -= 6;
-    ctx.font = `900 ${valueFontSize * sf}px Consolas`;
+    ctx.font = `900 ${valueFontSize * sf}px ${fontFamily}`;
   }
   const valueY = 212 * sf;
   const valueX = 56;
@@ -413,7 +413,7 @@ export function tickPatchLedMarquee(): void {
   if (!patchLedLastTick) patchLedLastTick = now;
   const dt = Math.min(50, now - patchLedLastTick);
   patchLedLastTick = now;
-  patchLedScrollOffset += (dt / 1000) * 120;
+  patchLedScrollOffset += (dt / 1000) * 520;
   renderLedDisplay(kbPatchLed, "PATCH", patchLedText, { allowScroll: true, scrollOffset: patchLedScrollOffset });
   markDirty();
 }
