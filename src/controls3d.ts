@@ -52,6 +52,7 @@ export function initSceneControls(
   const modWheelY = -0.52;
   const wheelR = 1.15;
   const wheelW = 0.55;
+  const wheelZ = 1.2;
   const pitchCX = panelCX - wheelW - 0.22;
   const markerMat = new THREE.MeshStandardMaterial({
     color: 0xaaaaaa, emissive: 0xaaaaaa, emissiveIntensity: 0.3,
@@ -84,7 +85,7 @@ export function initSceneControls(
     );
     strip.position.set(0, wheelR + 0.04, 0);
     spinner.add(strip);
-    spinner.position.set(cx, modWheelY, 0);
+    spinner.position.set(cx, modWheelY, wheelZ);
     scene.add(spinner);
 
     // Housing notch
@@ -92,7 +93,7 @@ export function initSceneControls(
       new THREE.BoxGeometry(wheelW + 0.1, 0.3, 0.18),
       matHousing
     );
-    notch.position.set(cx, -WKH / 2 + 0.03, 0);
+    notch.position.set(cx, -WKH / 2 + 0.03, wheelZ);
     scene.add(notch);
 
     // Invisible hitbox for raycasting
@@ -100,7 +101,7 @@ export function initSceneControls(
       new THREE.BoxGeometry(wheelW + 0.2, 1.4, 1.4),
       new THREE.MeshStandardMaterial({ visible: false })
     );
-    hitbox.position.set(cx, modWheelY + 0.5, 0);
+    hitbox.position.set(cx, modWheelY + 0.5, wheelZ);
     scene.add(hitbox);
 
     return { spinner, hitbox };
@@ -112,7 +113,7 @@ export function initSceneControls(
   kbModWheelHitbox = modObj.hitbox;
   kbModWheelHitbox.userData = { type: "modwheel" };
   const modLabel = createControlLabel("MOD", 0.98, 0.26);
-  if (modLabel) { modLabel.position.set(panelCX, -WKH / 2 + 0.012, 1.45); scene.add(modLabel); }
+  if (modLabel) { modLabel.position.set(panelCX, -WKH / 2 + 0.012, wheelZ + 0.25); scene.add(modLabel); }
 
   // Pitch wheel
   const pitchObj = buildWheel(pitchCX);
@@ -120,7 +121,7 @@ export function initSceneControls(
   kbPitchWheelHitbox = pitchObj.hitbox;
   kbPitchWheelHitbox.userData = { type: "pitchwheel" };
   const pitchLabel = createControlLabel("PITCH", 1.3, 0.26);
-  if (pitchLabel) { pitchLabel.position.set(pitchCX, -WKH / 2 + 0.012, 1.45); scene.add(pitchLabel); }
+  if (pitchLabel) { pitchLabel.position.set(pitchCX, -WKH / 2 + 0.012, wheelZ + 0.25); scene.add(pitchLabel); }
 
   // Knobs on the raised head slab
   const knobBaseZ = -(BODY_D / 2 - HEAD_D / 2);

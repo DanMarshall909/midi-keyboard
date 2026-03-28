@@ -16,8 +16,6 @@
         <span id="app-title" data-tauri-drag-region
               class="flex-1 min-w-0 truncate uppercase tracking-widest text-[10px]"
               style="color:var(--text-dim)">Acoustic Grand Piano</span>
-        <select id="patch-select" class="text-[11px] max-w-[200px]"></select>
-        <select id="channel-select" class="text-[11px] w-[46px]"></select>
         <div class="flex gap-1 shrink-0">
           <button id="config-btn" title="Settings"
                   class="w-[22px] h-[22px] p-0 flex items-center justify-center rounded-full text-[11px]"
@@ -125,6 +123,9 @@
         </div>
       </div>
 
+      <!-- Hidden selects — positioned near mouse before showPicker() -->
+      <select id="patch-select"   style="position:fixed;opacity:0;pointer-events:none;width:1px;height:1px"></select>
+      <select id="channel-select" style="position:fixed;opacity:0;pointer-events:none;width:1px;height:1px"></select>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

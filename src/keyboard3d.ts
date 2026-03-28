@@ -275,11 +275,15 @@ function setupMouseHandlers(canvas: HTMLCanvasElement): void {
 
     const { patch: patchMesh, channel: channelMesh } = getLedMeshes();
     if (patchMesh && kbRaycaster.intersectObject(patchMesh, false).length) {
-      (document.getElementById("patch-select") as HTMLSelectElement).showPicker();
+      const sel = document.getElementById("patch-select") as HTMLSelectElement;
+      sel.style.left = e.clientX + "px"; sel.style.top = e.clientY + "px";
+      sel.showPicker();
       return;
     }
     if (channelMesh && kbRaycaster.intersectObject(channelMesh, false).length) {
-      (document.getElementById("channel-select") as HTMLSelectElement).showPicker();
+      const sel = document.getElementById("channel-select") as HTMLSelectElement;
+      sel.style.left = e.clientX + "px"; sel.style.top = e.clientY + "px";
+      sel.showPicker();
       return;
     }
 
