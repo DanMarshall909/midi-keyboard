@@ -143,6 +143,12 @@ let kbModWheelHitbox = null;
 let kbPitchWheelSpinner = null;
 let kbPitchWheelHitbox = null;
 const kbKnobBodies = [];   // THREE.Mesh per knob (for raycasting + rotation)
+let kbPatchLed = null;
+let kbChannelLed = null;
+let patchLedText = "";
+let patchLedScrollOffset = 0;
+let patchLedScrollActive = false;
+let patchLedLastTick = 0;
 
 // Shared materials — no per-key cloning
 const matWhite = new THREE.MeshStandardMaterial({ color: 0xf0f0eb, roughness: 0.35, metalness: 0.0 });
@@ -213,6 +219,7 @@ function setThemeLighting(name) {
     kbSun.intensity = cfg.sun.intensity;
     kbFill.color.set(cfg.fill.color);
     kbFill.intensity = cfg.fill.intensity;
+    updateSceneLedDisplays();
     kbNeedsRender = true;
 }
 
@@ -488,6 +495,7 @@ function initKeyboard3D() {
     // On-demand render loop; disco mode forces continuous animation
     (function loop() {
         requestAnimationFrame(loop);
+        tickPatchLedMarquee();
         if (discoMode) {
             discoAngle += 0.02;
             // Slowly drifting orbit center
@@ -549,6 +557,7 @@ function initKeyboard3D() {
             r.style.setProperty('--mod-grip-t', `hsl(${h1},60%,30%)`);
             r.style.setProperty('--mod-grip-b', `hsl(${h1},60%,15%)`);
             r.style.setProperty('--mod-grip-bdr', `hsla(${h1},100%,65%,0.4)`);
+            updateSceneLedDisplays();
             kbNeedsRender = true;
         }
         if (!kbNeedsRender) return;
@@ -692,6 +701,21 @@ function parseCssColorToHex(varName) {
     return 0x7ab4ff;
 }
 
+function parseCssColorToRgb(varName, fallback = "#83ff9e") {
+    const raw = getComputedStyle(document.documentElement).getPropertyValue(varName).trim() || fallback;
+    const c = new THREE.Color();
+    try {
+        c.setStyle(raw);
+    } catch {
+        c.setStyle(fallback);
+    }
+    return {
+        r: Math.round(c.r * 255),
+        g: Math.round(c.g * 255),
+        b: Math.round(c.b * 255),
+    };
+}
+
 function createControlLabel(text, width = 0.95, height = 0.24) {
     const canvas = document.createElement("canvas");
     canvas.width = 2048;
@@ -729,6 +753,156 @@ function createControlLabel(text, width = 0.95, height = 0.24) {
     );
     label.rotation.x = -Math.PI / 2;
     return label;
+}
+
+function createLedDisplay(width = 1.9, height = 0.58, canvasHeight = 320) {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1024;
+    canvas.height = canvasHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.generateMipmaps = false;
+    texture.anisotropy = 8;
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.needsUpdate = true;
+
+    const mesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(width, height),
+        new THREE.MeshBasicMaterial({
+            map: texture,
+            transparent: true,
+            side: THREE.DoubleSide,
+            depthWrite: false,
+        })
+    );
+    mesh.rotation.x = -Math.PI / 2;
+    return { canvas, ctx, texture, mesh };
+}
+
+function renderLedDisplay(led, title, value, opts = {}) {
+    if (!led?.ctx) return;
+    const { scrollOffset = 0, allowScroll = false } = opts;
+    const { canvas, ctx, texture } = led;
+    const w = canvas.width;
+    const h = canvas.height;
+    const sf = h / 320;
+    const { r, g, b } = parseCssColorToRgb("--accent", "#83ff9e");
+    const darkR = Math.round(r * 0.08);
+    const darkG = Math.round(g * 0.08);
+    const darkB = Math.round(b * 0.08);
+    const deepR = Math.round(r * 0.18);
+    const deepG = Math.round(g * 0.18);
+    const deepB = Math.round(b * 0.18);
+    const brightR = Math.min(255, Math.round(r + (255 - r) * 0.26));
+    const brightG = Math.min(255, Math.round(g + (255 - g) * 0.26));
+    const brightB = Math.min(255, Math.round(b + (255 - b) * 0.26));
+
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = `rgba(${darkR}, ${darkG}, ${darkB}, 0.96)`;
+    ctx.fillRect(18, 22 * sf, w - 36, h - 44 * sf);
+
+    // Soft inner glow across the LED panel.
+    const glowGrad = ctx.createLinearGradient(0, 0, 0, h);
+    glowGrad.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.20)`);
+    glowGrad.addColorStop(0.5, `rgba(${deepR}, ${deepG}, ${deepB}, 0.16)`);
+    glowGrad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0.08)`);
+    ctx.fillStyle = glowGrad;
+    ctx.fillRect(18, 22 * sf, w - 36, h - 44 * sf);
+
+    ctx.strokeStyle = `rgba(${brightR}, ${brightG}, ${brightB}, 0.42)`;
+    ctx.lineWidth = 5 * sf;
+    ctx.strokeRect(18, 22 * sf, w - 36, h - 44 * sf);
+
+    ctx.font = `700 ${64 * sf}px Consolas`;
+    ctx.fillStyle = `rgba(${brightR}, ${brightG}, ${brightB}, 0.98)`;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.shadowColor = `rgba(${brightR}, ${brightG}, ${brightB}, 0.75)`;
+    ctx.shadowBlur = 16 * sf;
+    ctx.fillText(title, 56, 88 * sf);
+
+    let valueFontSize = 196;
+    if (!allowScroll) {
+        if (value.length > 8) valueFontSize = 140;
+        if (value.length > 14) valueFontSize = 112;
+        if (value.length > 20) valueFontSize = 88;
+    }
+    const maxValueW = w - 90;
+    ctx.font = `900 ${valueFontSize * sf}px Consolas`;
+    while (!allowScroll && ctx.measureText(value).width > maxValueW && valueFontSize > 44) {
+        valueFontSize -= 6;
+        ctx.font = `900 ${valueFontSize * sf}px Consolas`;
+    }
+    const valueY = 212 * sf;
+    const valueX = 56;
+    const valueWidth = ctx.measureText(value).width;
+    const overflowPx = Math.max(0, Math.ceil(valueWidth - maxValueW));
+    ctx.lineWidth = 14 * sf;
+    ctx.strokeStyle = `rgba(${darkR}, ${darkG}, ${darkB}, 0.95)`;
+    ctx.fillStyle = `rgb(${brightR}, ${brightG}, ${brightB})`;
+    ctx.shadowColor = `rgba(${r}, ${g}, ${b}, 0.95)`;
+    ctx.shadowBlur = 26 * sf;
+
+    if (allowScroll && overflowPx > 0) {
+        const gap = 100;
+        const stride = valueWidth + gap;
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(valueX, 118 * sf, maxValueW, 140 * sf);
+        ctx.clip();
+
+        let x = valueX - (scrollOffset % stride);
+        while (x < valueX + maxValueW) {
+            ctx.strokeText(value, x, valueY);
+            ctx.fillText(value, x, valueY);
+            x += stride;
+        }
+        ctx.restore();
+    } else {
+        ctx.strokeText(value, valueX, valueY);
+        ctx.fillText(value, valueX, valueY);
+    }
+    ctx.shadowBlur = 0;
+
+    texture.needsUpdate = true;
+    return { overflowPx };
+}
+
+function tickPatchLedMarquee() {
+    if (!patchLedScrollActive || !kbPatchLed || !patchLedText) return;
+    const now = performance.now();
+    if (!patchLedLastTick) patchLedLastTick = now;
+    const dt = Math.min(50, now - patchLedLastTick);
+    patchLedLastTick = now;
+    patchLedScrollOffset += (dt / 1000) * 120; // px/s
+    renderLedDisplay(kbPatchLed, "PATCH", patchLedText, {
+        allowScroll: true,
+        scrollOffset: patchLedScrollOffset,
+    });
+    kbNeedsRender = true;
+}
+
+function updateSceneLedDisplays() {
+    if (!kbPatchLed || !kbChannelLed) return;
+    renderLedDisplay(kbChannelLed, "CH", String(channel + 1).padStart(2, "0"));
+    const patchNum = String(patch + 1).padStart(3, "0");
+    const patchName = GM_PATCH_NAMES[patch].toUpperCase().replace(/\s+/g, " ").trim();
+    const nextPatchText = `${patchNum} ${patchName}`;
+    if (nextPatchText !== patchLedText) {
+        patchLedText = nextPatchText;
+        patchLedScrollOffset = 0;
+        patchLedLastTick = 0;
+    }
+    const patchRender = renderLedDisplay(kbPatchLed, "PATCH", patchLedText, {
+        allowScroll: true,
+        scrollOffset: patchLedScrollOffset,
+    });
+    patchLedScrollActive = (patchRender?.overflowPx || 0) > 0;
+    kbNeedsRender = true;
 }
 
 // ── In-scene mod wheel + knobs ────────────────────────────────────────────────
@@ -859,11 +1033,31 @@ function initSceneControls() {
 
         const knobLabel = createControlLabel(kd.label, 0.9, 0.24);
         if (knobLabel) {
-            knobLabel.position.set(kx, headTopY + 0.012, knobBaseZ + 0.62);
+            knobLabel.position.set(kx, headTopY + 0.012, knobBaseZ + 0.32);
             kbScene.add(knobLabel);
         }
     }
 
+    const ledY = headTopY + 0.014;
+    const ledZ = knobBaseZ + 0.32;
+    const bodyLeft = pitchCX - wheelW / 2 - 0.4;
+    const ledMargin = 0.42;
+    const ledGap = 0.44;
+    const patchLedW = 2.6;
+    const channelLedW = 1.15;
+    kbPatchLed = createLedDisplay(patchLedW, 0.6);
+    kbChannelLed = createLedDisplay(channelLedW, 0.6, 320);
+    if (kbChannelLed?.mesh) {
+        const channelX = bodyLeft + ledMargin + patchLedW + ledGap + channelLedW / 2;
+        kbChannelLed.mesh.position.set(channelX, ledY, ledZ);
+        kbScene.add(kbChannelLed.mesh);
+    }
+    if (kbPatchLed?.mesh) {
+        const patchX = bodyLeft + ledMargin + patchLedW / 2;
+        kbPatchLed.mesh.position.set(patchX, ledY, ledZ);
+        kbScene.add(kbPatchLed.mesh);
+    }
+    updateSceneLedDisplays();
     updateSceneModWheel();
 }
 
@@ -1021,6 +1215,7 @@ for (let i = 1; i <= 16; i++) {
 }
 channelSelect.addEventListener("change", () => {
     channel = parseInt(channelSelect.value);
+    updateSceneLedDisplays();
 });
 
 // Patch selector
@@ -1041,6 +1236,7 @@ for (const [groupName, patches] of GM_PATCHES) {
 patchSelect.addEventListener("change", async () => {
     patch = parseInt(patchSelect.value);
     appTitle.textContent = GM_PATCH_NAMES[patch];
+    updateSceneLedDisplays();
     if (!connected) return;
     try {
         await invoke("program_change", { channel, program: patch });
