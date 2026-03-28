@@ -12,7 +12,7 @@ import { setStatus } from "./status";
 import { noteOn, noteOff } from "./midi";
 import {
   initSceneControls,
-  getModWheelHitbox, getPitchWheelHitbox, getKnobBodies,
+  getModWheelHitbox, getPitchWheelHitbox, getKnobBodies, getLedMeshes,
   updateSceneModWheel, updateSceneLedDisplays, updateKnobColors, tickPatchLedMarquee,
   handleKnobDrag, handleModWheelDrag, handlePitchWheelDrag, releasePitchWheel,
 } from "./controls3d";
@@ -271,6 +271,16 @@ function setupMouseHandlers(canvas: HTMLCanvasElement): void {
         dragInfo = { type: "knob", startY: e.clientY, startVal: SCENE_KNOBS[ki].value, ki };
         return;
       }
+    }
+
+    const { patch: patchMesh, channel: channelMesh } = getLedMeshes();
+    if (patchMesh && kbRaycaster.intersectObject(patchMesh, false).length) {
+      (document.getElementById("patch-select") as HTMLSelectElement).showPicker();
+      return;
+    }
+    if (channelMesh && kbRaycaster.intersectObject(channelMesh, false).length) {
+      (document.getElementById("channel-select") as HTMLSelectElement).showPicker();
+      return;
     }
 
     const mwHitbox = getModWheelHitbox();

@@ -32,6 +32,9 @@ let patchLedLastTick = 0;
 export function getModWheelHitbox(): THREE.Mesh | null { return kbModWheelHitbox; }
 export function getPitchWheelHitbox(): THREE.Mesh | null { return kbPitchWheelHitbox; }
 export function getKnobBodies(): THREE.Mesh[] { return kbKnobBodies; }
+export function getLedMeshes(): { patch: THREE.Mesh | null; channel: THREE.Mesh | null } {
+  return { patch: kbPatchLed?.mesh ?? null, channel: kbChannelLed?.mesh ?? null };
+}
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 export function initSceneControls(
